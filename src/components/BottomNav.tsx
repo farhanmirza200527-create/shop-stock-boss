@@ -1,4 +1,4 @@
-import { Home, Package, PlusCircle, Receipt, FileText } from "lucide-react";
+import { Home, Package, PlusCircle, Receipt, FileText, Wrench } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -9,8 +9,8 @@ const BottomNav = () => {
     { icon: Home, label: "Home", path: "/" },
     { icon: Package, label: "Inventory", path: "/inventory" },
     { icon: PlusCircle, label: "Add", path: "/add-product" },
+    { icon: Wrench, label: "Repairs", path: "/repairs" },
     { icon: Receipt, label: "Billing", path: "/billing" },
-    { icon: FileText, label: "Reports", path: "/reports" },
   ];
 
   return (

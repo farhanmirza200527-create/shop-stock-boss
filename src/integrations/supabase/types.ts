@@ -101,6 +101,63 @@ export type Database = {
         }
         Relationships: []
       }
+      repairs: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          delivery_date: string | null
+          device_model: string
+          estimated_cost: number
+          final_cost: number
+          id: string
+          parts_used: string | null
+          photo_url: string | null
+          problem_description: string
+          received_date: string
+          repair_status: string
+          updated_at: string
+          warranty_available: boolean
+          warranty_period: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          delivery_date?: string | null
+          device_model: string
+          estimated_cost?: number
+          final_cost?: number
+          id?: string
+          parts_used?: string | null
+          photo_url?: string | null
+          problem_description: string
+          received_date?: string
+          repair_status?: string
+          updated_at?: string
+          warranty_available?: boolean
+          warranty_period?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          delivery_date?: string | null
+          device_model?: string
+          estimated_cost?: number
+          final_cost?: number
+          id?: string
+          parts_used?: string | null
+          photo_url?: string | null
+          problem_description?: string
+          received_date?: string
+          repair_status?: string
+          updated_at?: string
+          warranty_available?: boolean
+          warranty_period?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

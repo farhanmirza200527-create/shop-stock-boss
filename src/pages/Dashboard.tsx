@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, TrendingUp, AlertCircle, IndianRupee } from "lucide-react";
+import { Package, TrendingUp, AlertCircle, IndianRupee, Wrench } from "lucide-react";
+import { Link } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 
 const Dashboard = () => {
@@ -18,10 +19,24 @@ const Dashboard = () => {
     },
   });
 
+  const { data: repairs = [] } = useQuery({
+    queryKey: ["repairs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("repairs")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const totalProducts = products.length;
   const totalValue = products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
   const lowStock = products.filter(product => product.quantity < 5).length;
   const warrantyProducts = products.filter(product => product.warranty_available).length;
+  const activeRepairs = repairs.filter(repair => repair.repair_status !== "Delivered").length;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -86,6 +101,29 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quick Access - Repairs */}
+        <Link to="/repairs">
+          <Card className="mt-6 shadow-md hover:shadow-lg transition-shadow bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/20 rounded-full">
+                    <Wrench className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Repair Management</h3>
+                    <p className="text-sm text-muted-foreground">Track mobile repair jobs</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">{activeRepairs}</div>
+                  <p className="text-xs text-muted-foreground">Active Jobs</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
         {/* Recent Products */}
         <Card className="mt-6 shadow-md">
