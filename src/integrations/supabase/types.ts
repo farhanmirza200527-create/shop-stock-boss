@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      bills: {
+        Row: {
+          balance_amount: number
+          bill_items: Json
+          created_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          paid_amount: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          balance_amount?: number
+          bill_items?: Json
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          paid_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          balance_amount?: number
+          bill_items?: Json
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          paid_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           column_number: string | null

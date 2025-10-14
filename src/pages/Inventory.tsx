@@ -1,14 +1,45 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, MapPin, AlertCircle, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import EditProductDialog from "@/components/EditProductDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface Product {
+  id: string;
+  product_name: string;
+  price: number;
+  section: string | null;
+  part: string | null;
+  row_number: string | null;
+  column_number: string | null;
+  warranty_available: boolean;
+  warranty_period: string | null;
+  quantity: number;
+  description: string | null;
+  image_url: string | null;
+}
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -19,7 +50,7 @@ const Inventory = () => {
         .order("product_name", { ascending: true });
       
       if (error) throw error;
-      return data;
+      return data as Product[];
     },
   });
 
@@ -27,6 +58,27 @@ const Inventory = () => {
     product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.section?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDelete = async () => {
+    if (!deletingProductId) return;
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", deletingProductId);
+
+      if (error) throw error;
+
+      toast.success("Product deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -96,7 +148,7 @@ const Inventory = () => {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap mb-3">
                         {product.warranty_available && (
                           <Badge variant="outline" className="text-xs">
                             ✓ Warranty: {product.warranty_period}
@@ -111,10 +163,31 @@ const Inventory = () => {
                       </div>
 
                       {product.description && (
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                           {product.description}
                         </p>
                       )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingProduct(product)}
+                          className="flex-1"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeletingProductId(product.id)}
+                          className="flex-1"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -123,6 +196,34 @@ const Inventory = () => {
           </div>
         )}
       </div>
+
+      {editingProduct && (
+        <EditProductDialog
+          product={editingProduct}
+          open={!!editingProduct}
+          onOpenChange={(open) => !open && setEditingProduct(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+          }}
+        />
+      )}
+
+      <AlertDialog open={!!deletingProductId} onOpenChange={(open) => !open && setDeletingProductId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>
