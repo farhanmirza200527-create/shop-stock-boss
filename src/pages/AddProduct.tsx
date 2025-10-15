@@ -16,6 +16,8 @@ const AddProduct = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   
+  const categories = ["Cables", "Covers", "Chargers", "Earbuds", "Screen Guards", "Other"];
+  
   const [formData, setFormData] = useState({
     product_name: "",
     price: 0,
@@ -23,6 +25,7 @@ const AddProduct = () => {
     part: "",
     row_number: "",
     column_number: "",
+    category: "Other",
     warranty_available: "No",
     warranty_period: "",
     quantity: 0,
@@ -84,6 +87,7 @@ const AddProduct = () => {
         part: "",
         row_number: "",
         column_number: "",
+        category: "Other",
         warranty_available: "No",
         warranty_period: "",
         quantity: 0,
@@ -212,6 +216,24 @@ const AddProduct = () => {
                   placeholder="0"
                   required
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <select
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-lg bg-background"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
             </CardContent>
           </Card>

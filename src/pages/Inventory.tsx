@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, AlertCircle, Edit, Trash2 } from "lucide-react";
+import { Search, MapPin, AlertCircle, Edit, Trash2, Mic, Camera, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import EditProductDialog from "@/components/EditProductDialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,13 +35,19 @@ interface Product {
   quantity: number;
   description: string | null;
   image_url: string | null;
+  category: string | null;
+  deleted_at: string | null;
 }
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const categories = ["All", "Cables", "Covers", "Chargers", "Earbuds", "Screen Guards", "Other"];
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -47,6 +55,7 @@ const Inventory = () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .is("deleted_at", null)
         .order("product_name", { ascending: true });
       
       if (error) throw error;
@@ -54,10 +63,12 @@ const Inventory = () => {
     },
   });
 
-  const filteredProducts = products.filter((product) =>
-    product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.section?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.section?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleDelete = async () => {
     if (!deletingProductId) return;
@@ -65,13 +76,14 @@ const Inventory = () => {
     try {
       const { error } = await supabase
         .from("products")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", deletingProductId);
 
       if (error) throw error;
 
-      toast.success("Product deleted successfully");
+      toast.success("Product moved to deleted list");
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["deleted-products"] });
     } catch (error) {
       console.error("Error deleting product:", error);
       toast.error("Failed to delete product");
@@ -80,10 +92,16 @@ const Inventory = () => {
     }
   };
 
+  const handleAddToBilling = (product: Product) => {
+    sessionStorage.setItem('quickAddProduct', JSON.stringify(product));
+    navigate('/billing');
+    toast.success(`${product.product_name} added to billing page`);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-4 px-4 shadow-lg sticky top-0 z-40">
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h1 className="text-xl font-bold mb-3">Inventory</h1>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary-foreground/60" />
@@ -91,13 +109,39 @@ const Inventory = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className="pl-10 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/60"
+              className="pl-10 pr-20 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/60"
             />
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-primary-foreground">
+                <Mic className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-primary-foreground">
+                <Camera className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Horizontal Scrolling Categories */}
+        <ScrollArea className="w-full whitespace-nowrap mb-6">
+          <div className="flex gap-2 pb-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="rounded-full"
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             Loading products...
@@ -107,87 +151,89 @@ const Inventory = () => {
             {searchQuery ? "No products found" : "No products yet. Add your first product!"}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    {product.image_url && (
-                      <img
-                        src={product.image_url}
-                        alt={product.product_name}
-                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg mb-1 truncate">
-                        {product.product_name}
-                      </h3>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg font-bold text-primary">
-                          ₹{product.price.toLocaleString('en-IN')}
-                        </span>
-                        <Badge
-                          variant={product.quantity < 5 ? "destructive" : "default"}
-                          className={product.quantity < 5 ? "bg-destructive" : "bg-accent"}
-                        >
-                          Qty: {product.quantity}
+                  {product.image_url && (
+                    <img
+                      src={product.image_url}
+                      alt={product.product_name}
+                      className="w-full h-40 object-cover rounded-lg mb-4"
+                    />
+                  )}
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{product.product_name}</h3>
+                        <p className="text-xs text-muted-foreground">{product.category}</p>
+                        <p className="text-2xl font-bold text-primary mt-1">₹{Number(product.price).toFixed(2)}</p>
+                      </div>
+                      <Button
+                        size="icon"
+                        className="rounded-full bg-gradient-to-br from-primary to-primary/80 hover:scale-110 transition-transform"
+                        onClick={() => handleAddToBilling(product)}
+                      >
+                        <Plus className="w-5 h-5" />
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span className="truncate">
+                        {[product.section && `Sec ${product.section}`, 
+                          product.part && `Part ${product.part}`,
+                          product.row_number && `Row ${product.row_number}`,
+                          product.column_number && `Col ${product.column_number}`
+                        ].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant={product.quantity < 5 ? "destructive" : "default"}
+                      >
+                        Qty: {product.quantity}
+                      </Badge>
+                      {product.warranty_available && (
+                        <Badge variant="outline" className="text-xs">
+                          ✓ {product.warranty_period}
                         </Badge>
-                      </div>
-                      
-                      {(product.section || product.part || product.row_number || product.column_number) && (
-                        <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
-                          <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                          <span className="truncate">
-                            {[product.section && `Sec ${product.section}`, 
-                              product.part && `Part ${product.part}`,
-                              product.row_number && `Row ${product.row_number}`,
-                              product.column_number && `Col ${product.column_number}`
-                            ].filter(Boolean).join(', ')}
-                          </span>
-                        </div>
                       )}
-
-                      <div className="flex items-center gap-2 flex-wrap mb-3">
-                        {product.warranty_available && (
-                          <Badge variant="outline" className="text-xs">
-                            ✓ Warranty: {product.warranty_period}
-                          </Badge>
-                        )}
-                        {product.quantity < 5 && (
-                          <Badge variant="destructive" className="text-xs flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            Low Stock
-                          </Badge>
-                        )}
-                      </div>
-
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                          {product.description}
-                        </p>
+                      {product.quantity < 5 && (
+                        <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Low Stock
+                        </Badge>
                       )}
+                    </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingProduct(product)}
-                          className="flex-1"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeletingProductId(product.id)}
-                          className="flex-1"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
+                    {product.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingProduct(product)}
+                        className="flex-1"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setDeletingProductId(product.id)}
+                        className="flex-1"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -213,7 +259,7 @@ const Inventory = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this product? This action cannot be undone.
+              This product will be moved to the deleted list. You can view it in Reports & History.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

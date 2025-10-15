@@ -52,8 +52,10 @@ export type Database = {
       }
       products: {
         Row: {
+          category: string | null
           column_number: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           image_url: string | null
@@ -68,8 +70,10 @@ export type Database = {
           warranty_period: string | null
         }
         Insert: {
+          category?: string | null
           column_number?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -84,8 +88,10 @@ export type Database = {
           warranty_period?: string | null
         }
         Update: {
+          category?: string | null
           column_number?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
