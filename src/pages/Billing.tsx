@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useGuestData } from "@/hooks/useGuestData";
 
 interface Product {
   id: string;
@@ -32,6 +34,9 @@ interface BillItem {
 }
 
 const Billing = () => {
+  const { user, isGuest } = useAuth();
+  const { getProducts: getGuestProducts, updateProduct: updateGuestProduct, addBill: addGuestBill } = useGuestData();
+  
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [customerName, setCustomerName] = useState("");
@@ -39,20 +44,39 @@ const Billing = () => {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [guestProducts, setGuestProducts] = useState<Product[]>([]);
   const queryClient = useQueryClient();
 
-  const { data: products = [] } = useQuery({
+  // Fetch products for authenticated users
+  const { data: dbProducts = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("id, product_name, price, quantity")
+        .is("deleted_at", null)
         .order("product_name", { ascending: true });
       
       if (error) throw error;
       return data as Product[];
     },
+    enabled: !isGuest,
   });
+
+  // Update guest products when needed
+  useEffect(() => {
+    if (isGuest) {
+      const guestData = getGuestProducts();
+      setGuestProducts(guestData.map(p => ({
+        id: p.id,
+        product_name: p.product_name,
+        price: p.price,
+        quantity: p.quantity,
+      })));
+    }
+  }, [isGuest, getGuestProducts]);
+
+  const products = isGuest ? guestProducts : dbProducts;
 
   const filteredProducts = products.filter((product) =>
     product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -126,29 +150,62 @@ const Billing = () => {
     setLoading(true);
 
     try {
-      // Save bill to database
-      const { error: billError } = await supabase.from("bills").insert([{
-        customer_name: customerName || null,
-        customer_phone: customerPhone || null,
-        total_amount: totalAmount,
-        paid_amount: paidAmount,
-        balance_amount: balanceAmount,
-        bill_items: billItems as any,
-      }]);
+      if (isGuest) {
+        // Guest mode - store locally
+        addGuestBill({
+          customer_name: customerName || undefined,
+          customer_phone: customerPhone || undefined,
+          total_amount: totalAmount,
+          paid_amount: paidAmount,
+          balance_amount: balanceAmount,
+          bill_items: billItems,
+        });
 
-      if (billError) throw billError;
-
-      // Update product quantities
-      for (const item of billItems) {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          const { error: updateError } = await supabase
-            .from("products")
-            .update({ quantity: product.quantity - item.quantity })
-            .eq("id", item.productId);
-
-          if (updateError) throw updateError;
+        // Update product quantities locally
+        for (const item of billItems) {
+          const product = guestProducts.find(p => p.id === item.productId);
+          if (product) {
+            updateGuestProduct(item.productId, { quantity: product.quantity - item.quantity });
+          }
         }
+
+        // Refresh guest products
+        const updatedProducts = getGuestProducts();
+        setGuestProducts(updatedProducts.map(p => ({
+          id: p.id,
+          product_name: p.product_name,
+          price: p.price,
+          quantity: p.quantity,
+        })));
+      } else {
+        // Authenticated mode - save to database with user_id
+        const { error: billError } = await supabase.from("bills").insert([{
+          customer_name: customerName || null,
+          customer_phone: customerPhone || null,
+          total_amount: totalAmount,
+          paid_amount: paidAmount,
+          balance_amount: balanceAmount,
+          bill_items: billItems as any,
+          user_id: user?.id,
+        }]);
+
+        if (billError) throw billError;
+
+        // Update product quantities
+        for (const item of billItems) {
+          const product = products.find(p => p.id === item.productId);
+          if (product) {
+            const { error: updateError } = await supabase
+              .from("products")
+              .update({ quantity: product.quantity - item.quantity })
+              .eq("id", item.productId);
+
+            if (updateError) throw updateError;
+          }
+        }
+
+        // Refresh products
+        queryClient.invalidateQueries({ queryKey: ["products"] });
       }
 
       toast.success("✅ Bill saved successfully!");
@@ -158,9 +215,6 @@ const Billing = () => {
       setPaidAmount(0);
       setCustomerName("");
       setCustomerPhone("");
-      
-      // Refresh products
-      queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (error) {
       console.error("Error saving bill:", error);
       toast.error("Failed to save bill");
@@ -172,8 +226,13 @@ const Billing = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-4 px-4 shadow-lg sticky top-0 z-40">
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold">Create Bill</h1>
+          {isGuest && (
+            <span className="text-xs bg-primary-foreground/20 px-2 py-1 rounded">
+              Guest Mode
+            </span>
+          )}
         </div>
       </header>
 

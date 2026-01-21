@@ -1,37 +1,23 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { user, isLoading, isGuest } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener BEFORE checking session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      if (!session) {
-        navigate('/auth');
-      }
-    });
-
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-      if (!session) {
-        navigate('/auth');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (!isLoading && !user && !isGuest) {
+      navigate('/auth');
+    }
+  }, [user, isLoading, isGuest, navigate]);
 
   // Show loading while checking auth
-  if (isAuthenticated === null) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -42,7 +28,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  return isAuthenticated ? <>{children}</> : null;
+  // Allow access if authenticated OR in guest mode
+  return (user || isGuest) ? <>{children}</> : null;
 };
 
 export default ProtectedRoute;
