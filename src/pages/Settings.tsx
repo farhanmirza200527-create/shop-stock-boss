@@ -1,14 +1,34 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Moon, Sun, Download, Upload } from "lucide-react";
+import { Settings as SettingsIcon, Moon, Sun, Download, Upload, LogOut } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
   const [darkMode, setDarkMode] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Signed Out",
+        description: "You have been signed out successfully",
+      });
+      navigate("/auth");
+    }
+  };
 
   const handleThemeToggle = () => {
     setDarkMode(!darkMode);
@@ -107,6 +127,23 @@ const Settings = () => {
                 © 2025 All rights reserved
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Logout */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg">Account</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleLogout} 
+              className="w-full justify-start"
+              variant="destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
           </CardContent>
         </Card>
       </div>
