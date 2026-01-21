@@ -39,15 +39,6 @@ const Auth = () => {
           Sign Up
         </Button>
 
-        {/* Skip for Now */}
-        <Button
-          variant="link"
-          className="text-base text-muted-foreground hover:text-foreground"
-          onClick={() => navigate("/")}
-        >
-          Skip for now
-        </Button>
-
         {/* Spacer */}
         <div className="flex-1 min-h-[100px]" />
 
