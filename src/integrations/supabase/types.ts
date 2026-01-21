@@ -25,6 +25,7 @@ export type Database = {
           paid_amount: number
           total_amount: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           balance_amount?: number
@@ -36,6 +37,7 @@ export type Database = {
           paid_amount?: number
           total_amount?: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           balance_amount?: number
@@ -47,6 +49,7 @@ export type Database = {
           paid_amount?: number
           total_amount?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -66,6 +69,7 @@ export type Database = {
           row_number: string | null
           section: string | null
           updated_at: string
+          user_id: string | null
           warranty_available: boolean
           warranty_period: string | null
         }
@@ -84,6 +88,7 @@ export type Database = {
           row_number?: string | null
           section?: string | null
           updated_at?: string
+          user_id?: string | null
           warranty_available?: boolean
           warranty_period?: string | null
         }
@@ -102,8 +107,36 @@ export type Database = {
           row_number?: string | null
           section?: string | null
           updated_at?: string
+          user_id?: string | null
           warranty_available?: boolean
           warranty_period?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          shop_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          shop_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          shop_name?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -123,6 +156,7 @@ export type Database = {
           received_date: string
           repair_status: string
           updated_at: string
+          user_id: string | null
           warranty_available: boolean
           warranty_period: string | null
         }
@@ -141,6 +175,7 @@ export type Database = {
           received_date?: string
           repair_status?: string
           updated_at?: string
+          user_id?: string | null
           warranty_available?: boolean
           warranty_period?: string | null
         }
@@ -159,6 +194,7 @@ export type Database = {
           received_date?: string
           repair_status?: string
           updated_at?: string
+          user_id?: string | null
           warranty_available?: boolean
           warranty_period?: string | null
         }

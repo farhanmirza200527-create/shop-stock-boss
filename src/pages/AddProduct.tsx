@@ -9,9 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Camera, Upload, ArrowLeft } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { useAuth } from "@/hooks/useAuth";
+import { useGuestData } from "@/hooks/useGuestData";
 
 const AddProduct = () => {
   const navigate = useNavigate();
+  const { user, isGuest } = useAuth();
+  const { addProduct: addGuestProduct } = useGuestData();
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -49,35 +53,47 @@ const AddProduct = () => {
     setLoading(true);
 
     try {
-      let imageUrl = "";
+      if (isGuest) {
+        // Guest mode - store locally
+        addGuestProduct({
+          ...formData,
+          warranty_available: formData.warranty_available === "Yes",
+          image_url: imagePreview || undefined,
+        });
+        toast.success("✅ Product Added Successfully!");
+      } else {
+        // Authenticated mode - store in database
+        let imageUrl = "";
 
-      // Upload image if selected
-      if (imageFile) {
-        const fileExt = imageFile.name.split(".").pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const { error: uploadError, data } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, imageFile);
+        // Upload image if selected
+        if (imageFile) {
+          const fileExt = imageFile.name.split(".").pop();
+          const fileName = `${user?.id}/${Math.random()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from("product-images")
+            .upload(fileName, imageFile);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(fileName);
+          const { data: { publicUrl } } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(fileName);
 
-        imageUrl = publicUrl;
+          imageUrl = publicUrl;
+        }
+
+        // Insert product data with user_id
+        const { error: insertError } = await supabase.from("products").insert({
+          ...formData,
+          warranty_available: formData.warranty_available === "Yes",
+          image_url: imageUrl,
+          user_id: user?.id,
+        });
+
+        if (insertError) throw insertError;
+
+        toast.success("✅ Product Added Successfully!");
       }
-
-      // Insert product data
-      const { error: insertError } = await supabase.from("products").insert({
-        ...formData,
-        warranty_available: formData.warranty_available === "Yes",
-        image_url: imageUrl,
-      });
-
-      if (insertError) throw insertError;
-
-      toast.success("✅ Product Added Successfully!");
       
       // Reset form
       setFormData({
@@ -119,6 +135,11 @@ const AddProduct = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold">Add New Product</h1>
+          {isGuest && (
+            <span className="ml-auto text-xs bg-primary-foreground/20 px-2 py-1 rounded">
+              Guest Mode
+            </span>
+          )}
         </div>
       </header>
 
