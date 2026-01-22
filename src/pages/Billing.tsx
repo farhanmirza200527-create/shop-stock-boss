@@ -178,7 +178,17 @@ const Billing = () => {
           quantity: p.quantity,
         })));
       } else {
-        // Authenticated mode - save to database with user_id
+        // CRITICAL: Re-fetch current session to ensure we have the latest user
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
+
+        // Block save if user is not authenticated
+        if (!currentUserId) {
+          toast.error("You must be logged in to save bills. Please login again.");
+          return;
+        }
+
+        // Authenticated mode - save to database with verified user_id
         const { error: billError } = await supabase.from("bills").insert([{
           customer_name: customerName || null,
           customer_phone: customerPhone || null,
@@ -186,7 +196,7 @@ const Billing = () => {
           paid_amount: paidAmount,
           balance_amount: balanceAmount,
           bill_items: billItems as any,
-          user_id: user?.id,
+          user_id: currentUserId,
         }]);
 
         if (billError) throw billError;
