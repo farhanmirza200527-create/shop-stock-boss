@@ -72,12 +72,21 @@ const Repairs = () => {
   // Add repair mutation
   const addRepairMutation = useMutation({
     mutationFn: async (repairData: any) => {
+      // CRITICAL: Re-fetch current session to ensure we have the latest user
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+
+      // Block save if user is not authenticated
+      if (!currentUserId) {
+        throw new Error("You must be logged in to add repairs. Please login again.");
+      }
+
       let photoUrl = null;
 
       // Upload photo if provided
       if (photoFile) {
         const fileExt = photoFile.name.split(".").pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        const fileName = `${currentUserId}/${Math.random()}.${fileExt}`;
         const filePath = `repair-photos/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
@@ -107,7 +116,7 @@ const Repairs = () => {
         warranty_available: repairData.warranty_available,
         warranty_period: repairData.warranty_period || null,
         photo_url: photoUrl,
-        user_id: user?.id,
+        user_id: currentUserId,
       }]);
 
       if (error) throw error;
@@ -120,10 +129,10 @@ const Repairs = () => {
       });
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to add repair job",
+        description: error.message || "Failed to add repair job",
         variant: "destructive",
       });
       console.error("Error adding repair:", error);

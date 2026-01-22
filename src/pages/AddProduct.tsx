@@ -62,13 +62,23 @@ const AddProduct = () => {
         });
         toast.success("✅ Product Added Successfully!");
       } else {
-        // Authenticated mode - store in database
+        // CRITICAL: Re-fetch current session to ensure we have the latest user
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
+
+        // Block save if user is not authenticated
+        if (!currentUserId) {
+          toast.error("You must be logged in to add products. Please login again.");
+          navigate("/auth");
+          return;
+        }
+
         let imageUrl = "";
 
         // Upload image if selected
         if (imageFile) {
           const fileExt = imageFile.name.split(".").pop();
-          const fileName = `${user?.id}/${Math.random()}.${fileExt}`;
+          const fileName = `${currentUserId}/${Math.random()}.${fileExt}`;
           const { error: uploadError } = await supabase.storage
             .from("product-images")
             .upload(fileName, imageFile);
@@ -82,12 +92,12 @@ const AddProduct = () => {
           imageUrl = publicUrl;
         }
 
-        // Insert product data with user_id
+        // Insert product data with verified user_id
         const { error: insertError } = await supabase.from("products").insert({
           ...formData,
           warranty_available: formData.warranty_available === "Yes",
           image_url: imageUrl,
-          user_id: user?.id,
+          user_id: currentUserId,
         });
 
         if (insertError) throw insertError;
