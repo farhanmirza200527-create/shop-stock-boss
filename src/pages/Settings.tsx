@@ -4,17 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Settings as SettingsIcon, Moon, Sun, Download, Upload, LogOut, User, Store, Mail } from "lucide-react";
+import { Settings as SettingsIcon, Moon, Sun, Download, Upload, LogOut, User, Store, Mail, Crown, Calendar, ShieldCheck } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLicense } from "@/hooks/useLicense";
+import LicenseBadge from "@/components/LicenseBadge";
+import { format } from "date-fns";
 
 const Settings = () => {
   const [darkMode, setDarkMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isGuest, setGuestMode } = useAuth();
+  const { license, isLoading: licenseLoading } = useLicense();
 
   // Fetch user profile
   const { data: profile } = useQuery({
@@ -150,6 +154,69 @@ const Settings = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* License Info */}
+        {!isGuest && (
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5" />
+                License
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">License Type</p>
+                    <div className="mt-1">
+                      <LicenseBadge 
+                        licenseType={license.licenseType} 
+                        daysRemaining={license.daysRemaining}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {license.endDate && (
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      {license.licenseType === 'EXPIRED' ? 'Expired On' : 'Valid Until'}
+                    </p>
+                    <p className="font-medium">{format(license.endDate, 'dd MMM yyyy')}</p>
+                  </div>
+                </div>
+              )}
+
+              {license.licenseType === 'TRIAL' && (
+                <div className="bg-secondary/50 border border-border rounded-lg p-3">
+                  <p className="text-sm text-secondary-foreground">
+                    <strong>Trial Limits:</strong> {license.maxProducts} products, {license.maxBillsPerMonth} bills/month
+                  </p>
+                </div>
+              )}
+
+              {license.licenseType !== 'ACTIVE' && (
+                <Button 
+                  className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                  onClick={() => {
+                    toast({
+                      title: "Upgrade",
+                      description: "Payment integration coming soon!",
+                    });
+                  }}
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Theme Settings */}
         <Card className="shadow-md">

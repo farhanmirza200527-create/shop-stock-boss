@@ -118,6 +118,11 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          license_end_date: string | null
+          license_start_date: string | null
+          license_type: string
+          max_bills_per_month: number
+          max_products: number
           shop_name: string | null
           updated_at: string
           user_id: string
@@ -126,6 +131,11 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          license_end_date?: string | null
+          license_start_date?: string | null
+          license_type?: string
+          max_bills_per_month?: number
+          max_products?: number
           shop_name?: string | null
           updated_at?: string
           user_id: string
@@ -134,6 +144,11 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          license_end_date?: string | null
+          license_start_date?: string | null
+          license_type?: string
+          max_bills_per_month?: number
+          max_products?: number
           shop_name?: string | null
           updated_at?: string
           user_id?: string
