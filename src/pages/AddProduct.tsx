@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,16 +12,40 @@ import { Camera, Upload, ArrowLeft } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuestData } from "@/hooks/useGuestData";
+import { useLicense } from "@/hooks/useLicense";
+import LicenseExpiredModal from "@/components/LicenseExpiredModal";
+import LicenseBadge from "@/components/LicenseBadge";
 
 const AddProduct = () => {
   const navigate = useNavigate();
   const { user, isGuest } = useAuth();
-  const { addProduct: addGuestProduct } = useGuestData();
+  const { addProduct: addGuestProduct, getProducts: getGuestProducts } = useGuestData();
+  const { license, canAddProduct, getLicenseMessage } = useLicense();
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
   
   const categories = ["Cables", "Covers", "Chargers", "Earbuds", "Screen Guards", "Other"];
+
+  // Fetch current product count for license validation
+  const { data: productCount = 0 } = useQuery({
+    queryKey: ["product-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("products")
+        .select("*", { count: "exact", head: true })
+        .is("deleted_at", null);
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !isGuest && !!user,
+  });
+
+  // Guest product count
+  const guestProductCount = isGuest ? getGuestProducts().length : 0;
+  const currentProductCount = isGuest ? guestProductCount : productCount;
   
   const [formData, setFormData] = useState({
     product_name: "",
@@ -50,6 +75,19 @@ const AddProduct = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // LICENSE CHECK: Validate before saving
+    if (!isGuest && !canAddProduct(currentProductCount)) {
+      if (license.licenseType === 'EXPIRED') {
+        setShowLicenseModal(true);
+        return;
+      }
+      if (license.licenseType === 'TRIAL') {
+        toast.error(`Trial limit reached! Maximum ${license.maxProducts} products allowed. Please upgrade.`);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -379,15 +417,37 @@ const AddProduct = () => {
             </CardContent>
           </Card>
 
+          {/* License warning banner */}
+          {!isGuest && license.licenseType === 'EXPIRED' && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-center">
+              <p className="text-destructive font-medium">Your license has expired</p>
+              <p className="text-sm text-muted-foreground">Please upgrade to add products</p>
+            </div>
+          )}
+
+          {!isGuest && license.licenseType === 'TRIAL' && (
+            <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                Products: {currentProductCount} / {license.maxProducts}
+              </p>
+            </div>
+          )}
+
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || (!isGuest && license.licenseType === 'EXPIRED')}
             className="w-full bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 text-accent-foreground font-semibold py-6"
           >
             {loading ? "Adding Product..." : "Add Product"}
           </Button>
         </form>
       </div>
+
+      <LicenseExpiredModal 
+        open={showLicenseModal} 
+        onOpenChange={setShowLicenseModal}
+        message={getLicenseMessage() || undefined}
+      />
 
       <BottomNav />
     </div>
