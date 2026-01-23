@@ -17,8 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuestData } from "@/hooks/useGuestData";
-import { useLicense } from "@/hooks/useLicense";
-import LicenseExpiredModal from "@/components/LicenseExpiredModal";
 
 interface Product {
   id: string;
@@ -37,8 +35,7 @@ interface BillItem {
 
 const Billing = () => {
   const { user, isGuest } = useAuth();
-  const { getProducts: getGuestProducts, updateProduct: updateGuestProduct, addBill: addGuestBill, getBills: getGuestBills } = useGuestData();
-  const { license, canCreateBill, getLicenseMessage } = useLicense();
+  const { getProducts: getGuestProducts, updateProduct: updateGuestProduct, addBill: addGuestBill } = useGuestData();
   
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [paidAmount, setPaidAmount] = useState<number>(0);
@@ -48,39 +45,7 @@ const Billing = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [guestProducts, setGuestProducts] = useState<Product[]>([]);
-  const [showLicenseModal, setShowLicenseModal] = useState(false);
   const queryClient = useQueryClient();
-
-  // Get current month's bill count
-  const { data: monthlyBillCount = 0 } = useQuery({
-    queryKey: ["monthly-bill-count"],
-    queryFn: async () => {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      
-      const { count, error } = await supabase
-        .from("bills")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", startOfMonth.toISOString());
-      
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !isGuest && !!user,
-  });
-
-  // Guest bill count for current month
-  const getGuestMonthlyBillCount = () => {
-    if (!isGuest) return 0;
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const bills = getGuestBills();
-    return bills.filter(b => new Date(b.created_at) >= startOfMonth).length;
-  };
-
-  const currentMonthBillCount = isGuest ? getGuestMonthlyBillCount() : monthlyBillCount;
 
   // Fetch products for authenticated users
   const { data: dbProducts = [] } = useQuery({
@@ -182,17 +147,6 @@ const Billing = () => {
       return;
     }
 
-    // LICENSE CHECK: Validate before saving
-    if (!isGuest && !canCreateBill(currentMonthBillCount)) {
-      if (license.licenseType === 'EXPIRED') {
-        setShowLicenseModal(true);
-        return;
-      }
-      if (license.licenseType === 'TRIAL') {
-        toast.error(`Monthly bill limit reached! Maximum ${license.maxBillsPerMonth} bills/month. Please upgrade.`);
-        return;
-      }
-    }
 
     setLoading(true);
 
@@ -424,25 +378,9 @@ const Billing = () => {
           </CardContent>
         </Card>
 
-        {/* License warning banner */}
-        {!isGuest && license.licenseType === 'EXPIRED' && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-center">
-            <p className="text-destructive font-medium">Your license has expired</p>
-            <p className="text-sm text-muted-foreground">Please upgrade to create bills</p>
-          </div>
-        )}
-
-        {!isGuest && license.licenseType === 'TRIAL' && (
-          <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
-            <p className="text-sm text-muted-foreground">
-              Bills this month: {currentMonthBillCount} / {license.maxBillsPerMonth}
-            </p>
-          </div>
-        )}
-
         <Button
           onClick={handleSaveBill}
-          disabled={loading || billItems.length === 0 || (!isGuest && license.licenseType === 'EXPIRED')}
+          disabled={loading || billItems.length === 0}
           className="w-full bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 text-accent-foreground font-semibold py-6"
         >
           <Receipt className="w-5 h-5 mr-2" />
@@ -497,11 +435,6 @@ const Billing = () => {
         </DialogContent>
       </Dialog>
 
-      <LicenseExpiredModal 
-        open={showLicenseModal} 
-        onOpenChange={setShowLicenseModal}
-        message={getLicenseMessage() || undefined}
-      />
 
       <BottomNav />
     </div>

@@ -5,20 +5,16 @@ import BottomNav from "@/components/BottomNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download, Filter, Trash2, Lock } from "lucide-react";
+import { Download, Filter, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { useLicense } from "@/hooks/useLicense";
-import LicenseBadge from "@/components/LicenseBadge";
-import { toast } from "sonner";
 
 const Reports = () => {
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const { isGuest } = useAuth();
-  const { license, canAccessReports } = useLicense();
   
   const { data: bills } = useQuery({
     queryKey: ["bills"],
@@ -83,15 +79,6 @@ const Reports = () => {
   const filteredBills = filterByDate(bills);
   const filteredRepairs = filterByDate(repairs?.filter(r => r.repair_status === "Completed" || r.repair_status === "Delivered"));
 
-  const handleExport = (data: any[], filename: string) => {
-    // LICENSE CHECK: Only ACTIVE users can export
-    if (!canAccessReports()) {
-      toast.error("Export is a Premium feature. Please upgrade your license.");
-      return;
-    }
-    exportToCSV(data, filename);
-  };
-
   const exportToCSV = (data: any[], filename: string) => {
     if (!data || data.length === 0) return;
     
@@ -114,7 +101,11 @@ const Reports = () => {
       <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-4 px-4 shadow-lg">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold">Reports & History</h1>
-          {!isGuest && <LicenseBadge licenseType={license.licenseType} daysRemaining={license.daysRemaining} />}
+          {isGuest && (
+            <span className="text-xs bg-primary-foreground/20 px-2 py-1 rounded">
+              Guest Mode
+            </span>
+          )}
         </div>
       </header>
 
@@ -184,8 +175,7 @@ const Reports = () => {
           <TabsContent value="billing" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">All Bills ({filteredBills.length})</h2>
-              <Button onClick={() => handleExport(filteredBills, 'billing-history')} size="sm">
-                {!canAccessReports() && <Lock className="w-3 h-3 mr-1" />}
+              <Button onClick={() => exportToCSV(filteredBills, 'billing-history')} size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
               </Button>
@@ -242,8 +232,7 @@ const Reports = () => {
           <TabsContent value="repairs" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Completed Repairs ({filteredRepairs.length})</h2>
-              <Button onClick={() => handleExport(filteredRepairs, 'repair-history')} size="sm">
-                {!canAccessReports() && <Lock className="w-3 h-3 mr-1" />}
+              <Button onClick={() => exportToCSV(filteredRepairs, 'repair-history')} size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
               </Button>
@@ -291,8 +280,7 @@ const Reports = () => {
           <TabsContent value="deleted" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Deleted Products ({deletedProducts?.length || 0})</h2>
-              <Button onClick={() => handleExport(deletedProducts || [], 'deleted-products')} size="sm">
-                {!canAccessReports() && <Lock className="w-3 h-3 mr-1" />}
+              <Button onClick={() => exportToCSV(deletedProducts || [], 'deleted-products')} size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
               </Button>
