@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Types for guest data
+interface GuestCategory {
+  id: string;
+  name: string;
+  type: 'PRODUCT' | 'SERVICE';
+  created_at: string;
+}
+
 interface GuestProduct {
   id: string;
   product_name: string;
@@ -11,6 +18,8 @@ interface GuestProduct {
   row_number?: string;
   column_number?: string;
   category?: string;
+  category_id?: string;
+  item_type?: 'PRODUCT' | 'SERVICE';
   warranty_available: boolean;
   warranty_period?: string;
   description?: string;
@@ -49,6 +58,7 @@ interface GuestRepair {
 }
 
 interface GuestData {
+  categories: GuestCategory[];
   products: GuestProduct[];
   bills: GuestBill[];
   repairs: GuestRepair[];
@@ -60,12 +70,19 @@ const getInitialData = (): GuestData => {
   try {
     const stored = localStorage.getItem(GUEST_DATA_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Ensure categories array exists for older data
+      return {
+        categories: parsed.categories || [],
+        products: parsed.products || [],
+        bills: parsed.bills || [],
+        repairs: parsed.repairs || [],
+      };
     }
   } catch (error) {
     console.error('Error reading guest data:', error);
   }
-  return { products: [], bills: [], repairs: [] };
+  return { categories: [], products: [], bills: [], repairs: [] };
 };
 
 export const useGuestData = () => {
@@ -77,6 +94,31 @@ export const useGuestData = () => {
   }, [data]);
 
   const generateId = () => crypto.randomUUID();
+
+  // Categories
+  const addCategory = useCallback((category: Omit<GuestCategory, 'id' | 'created_at'>) => {
+    const newCategory: GuestCategory = {
+      ...category,
+      id: generateId(),
+      created_at: new Date().toISOString(),
+    };
+    setData(prev => ({
+      ...prev,
+      categories: [newCategory, ...prev.categories],
+    }));
+    return newCategory;
+  }, []);
+
+  const getCategories = useCallback(() => {
+    return data.categories;
+  }, [data.categories]);
+
+  const deleteCategory = useCallback((id: string) => {
+    setData(prev => ({
+      ...prev,
+      categories: prev.categories.filter(c => c.id !== id),
+    }));
+  }, []);
 
   // Products
   const addProduct = useCallback((product: Omit<GuestProduct, 'id' | 'created_at'>) => {
@@ -153,7 +195,7 @@ export const useGuestData = () => {
 
   // Clear all guest data
   const clearData = useCallback(() => {
-    setData({ products: [], bills: [], repairs: [] });
+    setData({ categories: [], products: [], bills: [], repairs: [] });
     localStorage.removeItem(GUEST_DATA_KEY);
   }, []);
 
@@ -163,6 +205,9 @@ export const useGuestData = () => {
   }, [data]);
 
   return {
+    addCategory,
+    getCategories,
+    deleteCategory,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -178,4 +223,4 @@ export const useGuestData = () => {
   };
 };
 
-export type { GuestProduct, GuestBill, GuestRepair, GuestData };
+export type { GuestProduct, GuestBill, GuestRepair, GuestData, GuestCategory };

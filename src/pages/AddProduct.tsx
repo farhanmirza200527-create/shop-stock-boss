@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,21 +8,68 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Camera, Upload, ArrowLeft } from "lucide-react";
+import { Camera, Upload, ArrowLeft, Plus } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuestData } from "@/hooks/useGuestData";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface Category {
+  id: string;
+  name: string;
+  type: 'PRODUCT' | 'SERVICE';
+}
 
 const AddProduct = () => {
   const navigate = useNavigate();
   const { user, isGuest } = useAuth();
-  const { addProduct: addGuestProduct } = useGuestData();
+  const { addProduct: addGuestProduct, addCategory: addGuestCategory, getCategories: getGuestCategories } = useGuestData();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
-  
-  const categories = ["Cables", "Covers", "Chargers", "Earbuds", "Screen Guards", "Other"];
-  
+  const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryType, setNewCategoryType] = useState<'PRODUCT' | 'SERVICE'>('PRODUCT');
+  const [guestCategories, setGuestCategories] = useState<Category[]>([]);
+
+  // Fetch user's categories from database
+  const { data: dbCategories = [], refetch: refetchCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name, type")
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data as Category[];
+    },
+    enabled: !isGuest && !!user,
+  });
+
+  // Load guest categories
+  useEffect(() => {
+    if (isGuest) {
+      setGuestCategories(getGuestCategories() as Category[]);
+    }
+  }, [isGuest, getGuestCategories]);
+
+  const categories = isGuest ? guestCategories : dbCategories;
+
   const [formData, setFormData] = useState({
     product_name: "",
     price: 0,
@@ -29,7 +77,9 @@ const AddProduct = () => {
     part: "",
     row_number: "",
     column_number: "",
-    category: "Other",
+    category_id: "",
+    category: "",
+    item_type: "PRODUCT" as 'PRODUCT' | 'SERVICE',
     warranty_available: "No",
     warranty_period: "",
     quantity: 0,
@@ -45,6 +95,91 @@ const AddProduct = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCategoryChange = (value: string) => {
+    if (value === "new") {
+      setShowNewCategoryDialog(true);
+    } else {
+      const selectedCategory = categories.find(c => c.id === value);
+      if (selectedCategory) {
+        setFormData({ 
+          ...formData, 
+          category_id: value,
+          category: selectedCategory.name,
+          item_type: selectedCategory.type,
+        });
+      }
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error("Please enter a category name");
+      return;
+    }
+
+    try {
+      if (isGuest) {
+        // Guest mode - store locally
+        const newCategory = addGuestCategory({
+          name: newCategoryName.trim(),
+          type: newCategoryType,
+        });
+        setGuestCategories(getGuestCategories() as Category[]);
+        setFormData({
+          ...formData,
+          category_id: newCategory.id,
+          category: newCategory.name,
+          item_type: newCategory.type,
+        });
+      } else {
+        // Get current session
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
+
+        if (!currentUserId) {
+          toast.error("You must be logged in. Please login again.");
+          navigate("/auth");
+          return;
+        }
+
+        const { data: newCategory, error } = await supabase
+          .from("categories")
+          .insert({
+            name: newCategoryName.trim(),
+            type: newCategoryType,
+            user_id: currentUserId,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '23505') {
+            toast.error("A category with this name already exists");
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        await refetchCategories();
+        setFormData({
+          ...formData,
+          category_id: newCategory.id,
+          category: newCategory.name,
+          item_type: newCategory.type as 'PRODUCT' | 'SERVICE',
+        });
+      }
+
+      toast.success(`Category "${newCategoryName}" created!`);
+      setShowNewCategoryDialog(false);
+      setNewCategoryName("");
+      setNewCategoryType("PRODUCT");
+    } catch (error) {
+      console.error("Error creating category:", error);
+      toast.error("Failed to create category");
     }
   };
 
@@ -95,8 +230,19 @@ const AddProduct = () => {
 
         // Insert product data with verified user_id
         const { error: insertError } = await supabase.from("products").insert({
-          ...formData,
+          product_name: formData.product_name,
+          price: formData.price,
+          section: formData.section || null,
+          part: formData.part || null,
+          row_number: formData.row_number || null,
+          column_number: formData.column_number || null,
+          category: formData.category || null,
+          category_id: formData.category_id || null,
+          item_type: formData.item_type,
           warranty_available: formData.warranty_available === "Yes",
+          warranty_period: formData.warranty_period || null,
+          quantity: formData.item_type === 'SERVICE' ? 0 : formData.quantity,
+          description: formData.description || null,
           image_url: imageUrl,
           user_id: currentUserId,
         });
@@ -104,6 +250,7 @@ const AddProduct = () => {
         if (insertError) throw insertError;
 
         toast.success("✅ Product Added Successfully!");
+        queryClient.invalidateQueries({ queryKey: ["products"] });
       }
       
       // Reset form
@@ -114,7 +261,9 @@ const AddProduct = () => {
         part: "",
         row_number: "",
         column_number: "",
-        category: "Other",
+        category_id: "",
+        category: "",
+        item_type: "PRODUCT",
         warranty_available: "No",
         warranty_period: "",
         quantity: 0,
@@ -203,21 +352,67 @@ const AddProduct = () => {
             </CardContent>
           </Card>
 
-          {/* Product Details */}
+          {/* Category Selection */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Product Details</CardTitle>
+              <CardTitle className="text-base">Category</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="product_name">Product Name *</Label>
+                <Label htmlFor="category">Select Category *</Label>
+                <Select 
+                  value={formData.category_id} 
+                  onValueChange={handleCategoryChange}
+                >
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue placeholder="Select a category..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-lg z-50">
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name} ({cat.type === 'SERVICE' ? 'Service' : 'Product'})
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="new" className="text-primary font-medium">
+                      <div className="flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Add New Category
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.category && (
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <p className="text-sm">
+                    <span className="font-medium">Category:</span> {formData.category}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Type:</span> {formData.item_type === 'SERVICE' ? 'Service' : 'Product'}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Product Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {formData.item_type === 'SERVICE' ? 'Service' : 'Product'} Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="product_name">Name *</Label>
                 <Input
                   id="product_name"
                   value={formData.product_name}
                   onChange={(e) =>
                     setFormData({ ...formData, product_name: e.target.value })
                   }
-                  placeholder="e.g., iPhone 15 Cover"
+                  placeholder={formData.item_type === 'SERVICE' ? "e.g., Screen Repair" : "e.g., iPhone 15 Cover"}
                   required
                 />
               </div>
@@ -236,92 +431,77 @@ const AddProduct = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="quantity">Quantity in Stock *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
-                  }
-                  placeholder="0"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <select
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full p-2 border rounded-lg bg-background"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {formData.item_type === 'PRODUCT' && (
+                <div>
+                  <Label htmlFor="quantity">Quantity in Stock</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
+                    }
+                    placeholder="0"
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Location in Shop */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Location in Shop</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="section">Section</Label>
-                <Input
-                  id="section"
-                  value={formData.section}
-                  onChange={(e) =>
-                    setFormData({ ...formData, section: e.target.value })
-                  }
-                  placeholder="e.g., A"
-                />
-              </div>
-              <div>
-                <Label htmlFor="part">Part</Label>
-                <Input
-                  id="part"
-                  value={formData.part}
-                  onChange={(e) =>
-                    setFormData({ ...formData, part: e.target.value })
-                  }
-                  placeholder="e.g., 2"
-                />
-              </div>
-              <div>
-                <Label htmlFor="row_number">Row</Label>
-                <Input
-                  id="row_number"
-                  value={formData.row_number}
-                  onChange={(e) =>
-                    setFormData({ ...formData, row_number: e.target.value })
-                  }
-                  placeholder="e.g., 3"
-                />
-              </div>
-              <div>
-                <Label htmlFor="column_number">Column</Label>
-                <Input
-                  id="column_number"
-                  value={formData.column_number}
-                  onChange={(e) =>
-                    setFormData({ ...formData, column_number: e.target.value })
-                  }
-                  placeholder="e.g., 5"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Location in Shop (only for products) */}
+          {formData.item_type === 'PRODUCT' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Location in Shop</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="section">Section</Label>
+                  <Input
+                    id="section"
+                    value={formData.section}
+                    onChange={(e) =>
+                      setFormData({ ...formData, section: e.target.value })
+                    }
+                    placeholder="e.g., A"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="part">Part</Label>
+                  <Input
+                    id="part"
+                    value={formData.part}
+                    onChange={(e) =>
+                      setFormData({ ...formData, part: e.target.value })
+                    }
+                    placeholder="e.g., 2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="row_number">Row</Label>
+                  <Input
+                    id="row_number"
+                    value={formData.row_number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, row_number: e.target.value })
+                    }
+                    placeholder="e.g., 3"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="column_number">Column</Label>
+                  <Input
+                    id="column_number"
+                    value={formData.column_number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, column_number: e.target.value })
+                    }
+                    placeholder="e.g., 5"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Warranty */}
           <Card>
@@ -374,7 +554,7 @@ const AddProduct = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Any special remarks or product type..."
+                placeholder="Any special remarks..."
                 rows={4}
               />
             </CardContent>
@@ -385,10 +565,53 @@ const AddProduct = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 text-accent-foreground font-semibold py-6"
           >
-            {loading ? "Adding Product..." : "Add Product"}
+            {loading ? "Adding..." : `Add ${formData.item_type === 'SERVICE' ? 'Service' : 'Product'}`}
           </Button>
         </form>
       </div>
+
+      {/* New Category Dialog */}
+      <Dialog open={showNewCategoryDialog} onOpenChange={setShowNewCategoryDialog}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Create New Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="new-category-name">Category Name</Label>
+              <Input
+                id="new-category-name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="e.g., Mobile Repair, Hair Cutting, Cold Drinks"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-category-type">Type</Label>
+              <Select 
+                value={newCategoryType} 
+                onValueChange={(v) => setNewCategoryType(v as 'PRODUCT' | 'SERVICE')}
+              >
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  <SelectItem value="PRODUCT">Product (has quantity/stock)</SelectItem>
+                  <SelectItem value="SERVICE">Service (no quantity needed)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewCategoryDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCategory}>
+              Create Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

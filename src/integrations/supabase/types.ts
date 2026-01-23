@@ -53,15 +53,44 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
+          category_id: string | null
           column_number: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
           id: string
           image_url: string | null
+          item_type: string | null
           part: string | null
           price: number
           product_name: string
@@ -75,12 +104,14 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          category_id?: string | null
           column_number?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          item_type?: string | null
           part?: string | null
           price?: number
           product_name: string
@@ -94,12 +125,14 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          category_id?: string | null
           column_number?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          item_type?: string | null
           part?: string | null
           price?: number
           product_name?: string
@@ -111,7 +144,15 @@ export type Database = {
           warranty_available?: boolean
           warranty_period?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
