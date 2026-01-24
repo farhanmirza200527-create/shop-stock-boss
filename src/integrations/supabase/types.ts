@@ -156,41 +156,65 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
+          address_text: string | null
+          city: string | null
           created_at: string
           email: string | null
           id: string
+          latitude: number | null
           license_end_date: string | null
           license_start_date: string | null
           license_type: string
+          longitude: number | null
           max_bills_per_month: number
           max_products: number
+          phone_number: string | null
           shop_name: string | null
+          shop_type: string | null
+          state: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          address?: string | null
+          address_text?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
           license_end_date?: string | null
           license_start_date?: string | null
           license_type?: string
+          longitude?: number | null
           max_bills_per_month?: number
           max_products?: number
+          phone_number?: string | null
           shop_name?: string | null
+          shop_type?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          address?: string | null
+          address_text?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
           license_end_date?: string | null
           license_start_date?: string | null
           license_type?: string
+          longitude?: number | null
           max_bills_per_month?: number
           max_products?: number
+          phone_number?: string | null
           shop_name?: string | null
+          shop_type?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
         }
