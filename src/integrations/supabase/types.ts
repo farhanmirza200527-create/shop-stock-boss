@@ -80,6 +80,77 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_payment_history: {
+        Row: {
+          amount: number
+          created_at: string
+          entry_type: string
+          id: string
+          note: string | null
+          pending_payment_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          entry_type: string
+          id?: string
+          note?: string | null
+          pending_payment_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entry_type?: string
+          id?: string
+          note?: string | null
+          pending_payment_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_payment_history_pending_payment_id_fkey"
+            columns: ["pending_payment_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_payments: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          total_advance: number
+          total_pending: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          total_advance?: number
+          total_pending?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          total_advance?: number
+          total_pending?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null

@@ -57,11 +57,30 @@ interface GuestRepair {
   created_at: string;
 }
 
+interface GuestPaymentHistory {
+  id: string;
+  entry_type: 'PENDING_ADD' | 'PAYMENT_RECEIVED' | 'ADVANCE_ADD' | 'ADJUSTMENT';
+  amount: number;
+  note?: string;
+  created_at: string;
+}
+
+interface GuestPendingPayment {
+  id: string;
+  customer_name: string;
+  customer_phone?: string;
+  total_pending: number;
+  total_advance: number;
+  history: GuestPaymentHistory[];
+  created_at: string;
+}
+
 interface GuestData {
   categories: GuestCategory[];
   products: GuestProduct[];
   bills: GuestBill[];
   repairs: GuestRepair[];
+  pendingPayments: GuestPendingPayment[];
 }
 
 const GUEST_DATA_KEY = 'guestData';
@@ -71,18 +90,19 @@ const getInitialData = (): GuestData => {
     const stored = localStorage.getItem(GUEST_DATA_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Ensure categories array exists for older data
+      // Ensure all arrays exist for older data
       return {
         categories: parsed.categories || [],
         products: parsed.products || [],
         bills: parsed.bills || [],
         repairs: parsed.repairs || [],
+        pendingPayments: parsed.pendingPayments || [],
       };
     }
   } catch (error) {
     console.error('Error reading guest data:', error);
   }
-  return { categories: [], products: [], bills: [], repairs: [] };
+  return { categories: [], products: [], bills: [], repairs: [], pendingPayments: [] };
 };
 
 export const useGuestData = () => {
@@ -190,18 +210,219 @@ export const useGuestData = () => {
 
   const getRepairs = useCallback(() => data.repairs, [data.repairs]);
 
+  // Pending Payments
+  const getPendingPayments = useCallback(() => data.pendingPayments, [data.pendingPayments]);
+
+  const getPaymentHistory = useCallback((customerId: string) => {
+    const customer = data.pendingPayments.find(p => p.id === customerId);
+    return customer?.history || [];
+  }, [data.pendingPayments]);
+
+  const addPendingPayment = useCallback((
+    customerName: string,
+    customerPhone: string,
+    amount: number,
+    note: string
+  ) => {
+    const existingIndex = data.pendingPayments.findIndex(
+      p => p.customer_name === customerName
+    );
+
+    if (existingIndex >= 0) {
+      const existing = data.pendingPayments[existingIndex];
+      let actualPendingAmount = amount;
+      const newHistory: GuestPaymentHistory[] = [];
+
+      // Auto-adjust with advance
+      if (existing.total_advance > 0) {
+        if (existing.total_advance >= amount) {
+          // Advance covers entire pending
+          setData(prev => ({
+            ...prev,
+            pendingPayments: prev.pendingPayments.map((p, i) =>
+              i === existingIndex
+                ? {
+                    ...p,
+                    total_advance: p.total_advance - amount,
+                    history: [
+                      {
+                        id: generateId(),
+                        entry_type: 'ADJUSTMENT' as const,
+                        amount,
+                        note: `Advance adjusted automatically`,
+                        created_at: new Date().toISOString(),
+                      },
+                      ...p.history,
+                    ],
+                  }
+                : p
+            ),
+          }));
+          return { adjusted: true };
+        } else {
+          actualPendingAmount = amount - existing.total_advance;
+          newHistory.push({
+            id: generateId(),
+            entry_type: 'ADJUSTMENT' as const,
+            amount: existing.total_advance,
+            note: `Advance of ₹${existing.total_advance} adjusted`,
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      if (actualPendingAmount > 0) {
+        newHistory.push({
+          id: generateId(),
+          entry_type: 'PENDING_ADD' as const,
+          amount: actualPendingAmount,
+          note: note || undefined,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      setData(prev => ({
+        ...prev,
+        pendingPayments: prev.pendingPayments.map((p, i) =>
+          i === existingIndex
+            ? {
+                ...p,
+                total_pending: p.total_pending + actualPendingAmount,
+                total_advance: existing.total_advance >= amount ? p.total_advance : 0,
+                history: [...newHistory, ...p.history],
+              }
+            : p
+        ),
+      }));
+    } else {
+      // New customer
+      const newPayment: GuestPendingPayment = {
+        id: generateId(),
+        customer_name: customerName,
+        customer_phone: customerPhone || undefined,
+        total_pending: amount,
+        total_advance: 0,
+        history: [
+          {
+            id: generateId(),
+            entry_type: 'PENDING_ADD' as const,
+            amount,
+            note: note || undefined,
+            created_at: new Date().toISOString(),
+          },
+        ],
+        created_at: new Date().toISOString(),
+      };
+      setData(prev => ({
+        ...prev,
+        pendingPayments: [newPayment, ...prev.pendingPayments],
+      }));
+    }
+    return { success: true };
+  }, [data.pendingPayments]);
+
+  const receivePayment = useCallback((customerId: string, amount: number) => {
+    let extra = 0;
+    setData(prev => ({
+      ...prev,
+      pendingPayments: prev.pendingPayments.map(p => {
+        if (p.id !== customerId) return p;
+
+        let newPending = p.total_pending;
+        let newAdvance = p.total_advance;
+
+        if (amount <= p.total_pending) {
+          newPending = p.total_pending - amount;
+        } else {
+          extra = amount - p.total_pending;
+          newPending = 0;
+          newAdvance = p.total_advance + extra;
+        }
+
+        return {
+          ...p,
+          total_pending: newPending,
+          total_advance: newAdvance,
+          history: [
+            {
+              id: generateId(),
+              entry_type: 'PAYMENT_RECEIVED' as const,
+              amount,
+              note: extra > 0 ? `Excess ₹${extra} added to advance` : undefined,
+              created_at: new Date().toISOString(),
+            },
+            ...p.history,
+          ],
+        };
+      }),
+    }));
+    return { extra };
+  }, []);
+
+  const addAdvance = useCallback((
+    customerId: string | undefined,
+    customerName: string,
+    customerPhone: string,
+    amount: number
+  ) => {
+    if (customerId) {
+      setData(prev => ({
+        ...prev,
+        pendingPayments: prev.pendingPayments.map(p =>
+          p.id === customerId
+            ? {
+                ...p,
+                total_advance: p.total_advance + amount,
+                history: [
+                  {
+                    id: generateId(),
+                    entry_type: 'ADVANCE_ADD' as const,
+                    amount,
+                    created_at: new Date().toISOString(),
+                  },
+                  ...p.history,
+                ],
+              }
+            : p
+        ),
+      }));
+    } else {
+      const newPayment: GuestPendingPayment = {
+        id: generateId(),
+        customer_name: customerName,
+        customer_phone: customerPhone || undefined,
+        total_pending: 0,
+        total_advance: amount,
+        history: [
+          {
+            id: generateId(),
+            entry_type: 'ADVANCE_ADD' as const,
+            amount,
+            created_at: new Date().toISOString(),
+          },
+        ],
+        created_at: new Date().toISOString(),
+      };
+      setData(prev => ({
+        ...prev,
+        pendingPayments: [newPayment, ...prev.pendingPayments],
+      }));
+    }
+    return { success: true };
+  }, []);
+
   // Get all data for migration
   const getAllData = useCallback(() => data, [data]);
 
   // Clear all guest data
   const clearData = useCallback(() => {
-    setData({ categories: [], products: [], bills: [], repairs: [] });
+    setData({ categories: [], products: [], bills: [], repairs: [], pendingPayments: [] });
     localStorage.removeItem(GUEST_DATA_KEY);
   }, []);
 
   // Check if there's any guest data
   const hasData = useCallback(() => {
-    return data.products.length > 0 || data.bills.length > 0 || data.repairs.length > 0;
+    return data.products.length > 0 || data.bills.length > 0 || data.repairs.length > 0 || data.pendingPayments.length > 0;
   }, [data]);
 
   return {
@@ -217,10 +438,15 @@ export const useGuestData = () => {
     getBills,
     addRepair,
     getRepairs,
+    getPendingPayments,
+    getPaymentHistory,
+    addPendingPayment,
+    receivePayment,
+    addAdvance,
     getAllData,
     clearData,
     hasData,
   };
 };
 
-export type { GuestProduct, GuestBill, GuestRepair, GuestData, GuestCategory };
+export type { GuestProduct, GuestBill, GuestRepair, GuestData, GuestCategory, GuestPendingPayment, GuestPaymentHistory };
