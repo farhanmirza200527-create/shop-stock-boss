@@ -15,6 +15,7 @@ import Billing from "./pages/Billing";
 import Reports from "./pages/Reports";
 import Repairs from "./pages/Repairs";
 import Settings from "./pages/Settings";
+import PendingPayments from "./pages/PendingPayments";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -42,6 +43,7 @@ function App() {
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/pending-payments" element={<ProtectedRoute><PendingPayments /></ProtectedRoute>} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

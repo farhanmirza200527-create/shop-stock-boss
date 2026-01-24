@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  Package, DollarSign, AlertCircle, Wrench, 
+  Package, DollarSign, Wrench, 
   Receipt, CheckCircle, Clock, TrendingUp, Calendar,
-  FileText 
+  FileText, Wallet
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
@@ -47,6 +47,18 @@ const Dashboard = () => {
     },
   });
 
+  const { data: pendingPayments } = useQuery({
+    queryKey: ["pending-payments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pending_payments")
+        .select("*")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Today's calculations
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -80,8 +92,12 @@ const Dashboard = () => {
     r.repair_status === "Completed" || r.repair_status === "Delivered"
   ).length || 0;
 
-  // Pending payments
-  const pendingPayments = bills?.filter(b => Number(b.balance_amount) > 0).length || 0;
+  // Pending payments from bills
+  const billsPendingPayments = bills?.filter(b => Number(b.balance_amount) > 0).length || 0;
+
+  // Customer pending payments summary
+  const totalCustomerPending = pendingPayments?.reduce((sum, p) => sum + Number(p.total_pending), 0) || 0;
+  const customersWithPending = pendingPayments?.filter(p => Number(p.total_pending) > 0).length || 0;
 
   // Upcoming deliveries (repairs with delivery date in next 7 days)
   const nextWeek = new Date();
@@ -98,8 +114,8 @@ const Dashboard = () => {
       value: todaysBills.length,
       icon: Receipt,
       subtitle: "Bills generated today",
-      gradient: "from-blue-500/10 to-blue-500/5",
-      iconColor: "text-blue-600"
+      gradient: "from-primary/10 to-primary/5",
+      iconColor: "text-primary"
     },
     {
       title: "Total Sales Today",
@@ -134,12 +150,12 @@ const Dashboard = () => {
       iconColor: "text-teal-600"
     },
     {
-      title: "Pending Payments",
-      value: pendingPayments,
+      title: "Bills with Balance",
+      value: billsPendingPayments,
       icon: Clock,
-      subtitle: "Bills with balance",
-      gradient: "from-red-500/10 to-red-500/5",
-      iconColor: "text-red-600"
+      subtitle: "Unpaid bills",
+      gradient: "from-amber-500/10 to-amber-500/5",
+      iconColor: "text-amber-600"
     },
     {
       title: "Monthly Revenue",
@@ -163,12 +179,29 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-4 px-4 shadow-lg">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold">Smart Stock & Billing</h1>
-          <p className="text-sm opacity-90">Mobile Accessories & Repair Manager</p>
+          <h1 className="text-2xl font-bold">My Manager</h1>
+          <p className="text-sm opacity-90">Smart Stock & Billing Manager</p>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Pending Payments Card - Clickable */}
+        <Link to="/pending-payments" className="block mb-6">
+          <Card className="bg-gradient-to-br from-destructive/10 to-destructive/5 hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer border-destructive/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-semibold">Pending Payments</CardTitle>
+              <Wallet className="h-6 w-6 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-destructive">₹{totalCustomerPending.toFixed(2)}</span>
+                <span className="text-sm text-muted-foreground">from {customersWithPending} customers</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Tap to manage customer payments & advances →</p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {reportCards.map((card, index) => {
             const Icon = card.icon;
