@@ -35,7 +35,13 @@ interface GuestBill {
   total_amount: number;
   paid_amount: number;
   balance_amount: number;
+  return_amount?: number;
+  discount?: number;
+  tax?: number;
   bill_items: any[];
+  payment_mode?: string;
+  bill_status?: string;
+  bill_number?: string;
   created_at: string;
 }
 
@@ -193,6 +199,13 @@ export const useGuestData = () => {
   }, []);
 
   const getBills = useCallback(() => data.bills, [data.bills]);
+
+  const updateBill = useCallback((id: string, updates: Partial<GuestBill>) => {
+    setData(prev => ({
+      ...prev,
+      bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b),
+    }));
+  }, []);
 
   // Repairs
   const addRepair = useCallback((repair: Omit<GuestRepair, 'id' | 'created_at'>) => {
@@ -436,6 +449,7 @@ export const useGuestData = () => {
     getDeletedProducts,
     addBill,
     getBills,
+    updateBill,
     addRepair,
     getRepairs,
     getPendingPayments,
