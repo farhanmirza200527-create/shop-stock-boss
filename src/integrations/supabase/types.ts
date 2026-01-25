@@ -18,11 +18,17 @@ export type Database = {
         Row: {
           balance_amount: number
           bill_items: Json
+          bill_number: string | null
+          bill_status: string | null
           created_at: string
           customer_name: string | null
           customer_phone: string | null
+          discount: number | null
           id: string
           paid_amount: number
+          payment_mode: string | null
+          return_amount: number | null
+          tax: number | null
           total_amount: number
           updated_at: string
           user_id: string | null
@@ -30,11 +36,17 @@ export type Database = {
         Insert: {
           balance_amount?: number
           bill_items?: Json
+          bill_number?: string | null
+          bill_status?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
+          discount?: number | null
           id?: string
           paid_amount?: number
+          payment_mode?: string | null
+          return_amount?: number | null
+          tax?: number | null
           total_amount?: number
           updated_at?: string
           user_id?: string | null
@@ -42,11 +54,17 @@ export type Database = {
         Update: {
           balance_amount?: number
           bill_items?: Json
+          bill_number?: string | null
+          bill_status?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
+          discount?: number | null
           id?: string
           paid_amount?: number
+          payment_mode?: string | null
+          return_amount?: number | null
+          tax?: number | null
           total_amount?: number
           updated_at?: string
           user_id?: string | null
@@ -290,6 +308,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      refunds: {
+        Row: {
+          bill_id: string
+          created_at: string
+          id: string
+          payment_mode: string
+          reason: string | null
+          refund_amount: number
+          refund_type: string
+          returned_items: Json | null
+          user_id: string
+        }
+        Insert: {
+          bill_id: string
+          created_at?: string
+          id?: string
+          payment_mode: string
+          reason?: string | null
+          refund_amount?: number
+          refund_type: string
+          returned_items?: Json | null
+          user_id: string
+        }
+        Update: {
+          bill_id?: string
+          created_at?: string
+          id?: string
+          payment_mode?: string
+          reason?: string | null
+          refund_amount?: number
+          refund_type?: string
+          returned_items?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       repairs: {
         Row: {
