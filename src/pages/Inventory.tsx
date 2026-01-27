@@ -5,11 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, AlertCircle, Edit, Trash2, Mic, Camera, Plus, Wrench, Package } from "lucide-react";
+import { Search, MapPin, AlertCircle, Edit, Trash2, Mic, ScanBarcode, Plus, Wrench, Package } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import EditProductDialog from "@/components/EditProductDialog";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
@@ -41,6 +42,7 @@ interface Product {
   category_id: string | null;
   item_type: string | null;
   deleted_at: string | null;
+  barcode: string | null;
 }
 
 interface Category {
@@ -56,6 +58,7 @@ const Inventory = () => {
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [guestProducts, setGuestProducts] = useState<Product[]>([]);
   const [guestCategories, setGuestCategories] = useState<Category[]>([]);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user, isGuest } = useAuth();
@@ -109,6 +112,7 @@ const Inventory = () => {
         category_id: p.category_id || null,
         item_type: p.item_type || 'PRODUCT',
         deleted_at: p.deleted_at || null,
+        barcode: p.barcode || null,
       })));
       setGuestCategories(getGuestCategories() as Category[]);
     }
@@ -116,6 +120,21 @@ const Inventory = () => {
 
   const products = isGuest ? guestProducts : dbProducts;
   const categories = isGuest ? guestCategories : dbCategories;
+
+  // Handle barcode scan - find and focus product
+  const handleBarcodeScan = (code: string) => {
+    const product = products.find(p => 
+      p.barcode?.toLowerCase() === code.toLowerCase() ||
+      p.product_name.toLowerCase() === code.toLowerCase()
+    );
+    
+    if (product) {
+      setSearchQuery(product.product_name);
+      toast.success(`Found: ${product.product_name}`);
+    } else {
+      toast.error(`No product found with barcode: ${code}`);
+    }
+  };
 
   // Get unique category names for filter tabs
   const categoryNames = ["All", ...new Set(categories.map(c => c.name))];
@@ -157,6 +176,7 @@ const Inventory = () => {
           category_id: p.category_id || null,
           item_type: p.item_type || 'PRODUCT',
           deleted_at: p.deleted_at || null,
+          barcode: p.barcode || null,
         })));
       } else {
         const { error } = await supabase
@@ -208,8 +228,13 @@ const Inventory = () => {
               <Button size="icon" variant="ghost" className="h-8 w-8 text-primary-foreground">
                 <Mic className="w-4 h-4" />
               </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-primary-foreground">
-                <Camera className="w-4 h-4" />
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8 text-primary-foreground"
+                onClick={() => setShowBarcodeScanner(true)}
+              >
+                <ScanBarcode className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -333,6 +358,14 @@ const Inventory = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScan={handleBarcodeScan}
+        title="Scan to Find Product"
+      />
 
       <BottomNav />
     </div>

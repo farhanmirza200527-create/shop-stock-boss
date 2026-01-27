@@ -22,7 +22,8 @@ import {
   MessageCircle,
   MessageSquare,
   Share2,
-  X
+  X,
+  ScanBarcode
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -44,6 +45,7 @@ import BillHistoryDialog, { Bill } from "@/components/billing/BillHistoryDialog"
 import RefundDialog, { RefundData } from "@/components/billing/RefundDialog";
 import ReceivePaymentDialog from "@/components/billing/ReceivePaymentDialog";
 import { downloadBillPdf, shareViaWhatsApp, shareViaSMS, shareBillPdf, BillData } from "@/components/billing/BillPdfGenerator";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 interface Product {
   id: string;
@@ -52,6 +54,7 @@ interface Product {
   quantity: number;
   item_type?: string;
   category?: string;
+  barcode?: string;
 }
 
 interface BillItem {
@@ -101,6 +104,9 @@ const Billing = () => {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [lastBillData, setLastBillData] = useState<BillData | null>(null);
   
+  // Barcode scanner state
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  
   const queryClient = useQueryClient();
 
   // Fetch products for authenticated users
@@ -109,7 +115,7 @@ const Billing = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, product_name, price, quantity, item_type, category")
+        .select("id, product_name, price, quantity, item_type, category, barcode")
         .is("deleted_at", null)
         .order("product_name", { ascending: true });
       
@@ -145,6 +151,7 @@ const Billing = () => {
         quantity: p.quantity,
         item_type: p.item_type,
         category: p.category,
+        barcode: p.barcode,
       })));
     }
   }, [isGuest, getGuestProducts]);
@@ -186,6 +193,20 @@ const Billing = () => {
       }]);
     }
     toast.success(`${product.product_name} added to bill`);
+  };
+
+  // Handle barcode scan - find product by barcode and add to bill
+  const handleBarcodeScan = (code: string) => {
+    const product = products.find(p => 
+      p.barcode?.toLowerCase() === code.toLowerCase() ||
+      p.product_name.toLowerCase() === code.toLowerCase()
+    );
+    
+    if (product) {
+      addProductToBill(product);
+    } else {
+      toast.error(`No product found with barcode: ${code}`);
+    }
   };
 
   const updateQuantity = (productId: string, newQuantity: number) => {
@@ -887,14 +908,27 @@ const Billing = () => {
           <DialogHeader>
             <DialogTitle>Select Product / Service</DialogTitle>
           </DialogHeader>
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products & services..."
-              className="pl-10"
-            />
+          <div className="flex gap-2 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products & services..."
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setShowProductDialog(false);
+                setShowBarcodeScanner(true);
+              }}
+              className="shrink-0"
+            >
+              <ScanBarcode className="w-5 h-5" />
+            </Button>
           </div>
           <div className="flex-1 overflow-y-auto space-y-2">
             {filteredProducts.length === 0 ? (
@@ -922,6 +956,7 @@ const Billing = () => {
                     <p className="text-sm text-muted-foreground">
                       ₹{product.price}
                       {product.item_type !== "SERVICE" && ` • Stock: ${product.quantity}`}
+                      {product.barcode && ` • ${product.barcode}`}
                     </p>
                   </div>
                   <Button size="sm" variant="ghost">
@@ -1029,6 +1064,14 @@ const Billing = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScan={handleBarcodeScan}
+        title="Scan Product Barcode"
+      />
 
       <BottomNav />
     </div>

@@ -24,6 +24,7 @@ interface GuestProduct {
   warranty_period?: string;
   description?: string;
   image_url?: string;
+  barcode?: string;
   created_at: string;
   deleted_at?: string;
 }

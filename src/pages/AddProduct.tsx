@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Camera, Upload, ArrowLeft, Plus } from "lucide-react";
+import { Camera, Upload, ArrowLeft, Plus, ScanBarcode } from "lucide-react";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuestData } from "@/hooks/useGuestData";
@@ -84,7 +85,14 @@ const AddProduct = () => {
     warranty_period: "",
     quantity: 0,
     description: "",
+    barcode: "",
   });
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+
+  const handleBarcodeScan = (code: string) => {
+    setFormData({ ...formData, barcode: code });
+    toast.success(`Barcode scanned: ${code}`);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -195,6 +203,7 @@ const AddProduct = () => {
           ...formData,
           warranty_available: formData.warranty_available === "Yes",
           image_url: imagePreview || undefined,
+          barcode: formData.barcode || undefined,
         });
         toast.success("✅ Product Added Successfully!");
       } else {
@@ -245,6 +254,7 @@ const AddProduct = () => {
           description: formData.description || null,
           image_url: imageUrl,
           user_id: currentUserId,
+          barcode: formData.barcode || null,
         });
 
         if (insertError) throw insertError;
@@ -268,6 +278,7 @@ const AddProduct = () => {
         warranty_period: "",
         quantity: 0,
         description: "",
+        barcode: "",
       });
       setImageFile(null);
       setImagePreview("");
@@ -445,6 +456,34 @@ const AddProduct = () => {
                   />
                 </div>
               )}
+
+              {/* Barcode field */}
+              <div>
+                <Label htmlFor="barcode">Barcode / SKU (Optional)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, barcode: e.target.value })
+                    }
+                    placeholder="Scan or enter barcode..."
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowBarcodeScanner(true)}
+                    className="shrink-0"
+                  >
+                    <ScanBarcode className="w-5 h-5" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use barcode to quickly add products to bills
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -612,6 +651,14 @@ const AddProduct = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScan={handleBarcodeScan}
+        title="Scan Product Barcode"
+      />
 
       <BottomNav />
     </div>
