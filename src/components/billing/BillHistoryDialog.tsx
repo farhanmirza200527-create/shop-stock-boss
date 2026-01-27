@@ -17,9 +17,17 @@ import {
   Eye,
   CreditCard,
   Banknote,
-  Smartphone
+  Smartphone,
+  MessageCircle,
+  MessageSquare
 } from "lucide-react";
-import { downloadBillPdf, shareBillPdf, BillData } from "./BillPdfGenerator";
+import { downloadBillPdf, shareBillPdf, shareViaWhatsApp, shareViaSMS, BillData } from "./BillPdfGenerator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Bill {
   id: string;
@@ -121,6 +129,14 @@ const BillHistoryDialog = ({
     shareBillPdf(prepareBillData(bill));
   };
 
+  const handleWhatsAppShare = (bill: Bill) => {
+    shareViaWhatsApp(prepareBillData(bill), bill.customer_phone || undefined);
+  };
+
+  const handleSMSShare = (bill: Bill) => {
+    shareViaSMS(prepareBillData(bill), bill.customer_phone || undefined);
+  };
+
   const canRefund = (status: string) => {
     return status === "PAID" || status === "PARTIAL";
   };
@@ -198,14 +214,28 @@ const BillHistoryDialog = ({
                         <Download className="w-3 h-3 mr-1" />
                         PDF
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleShare(bill)}
-                      >
-                        <Share2 className="w-3 h-3 mr-1" />
-                        Share
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <Share2 className="w-3 h-3 mr-1" />
+                            Share
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleWhatsAppShare(bill)}>
+                            <MessageCircle className="w-4 h-4 mr-2 text-green-600" />
+                            WhatsApp
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSMSShare(bill)}>
+                            <MessageSquare className="w-4 h-4 mr-2 text-blue-600" />
+                            SMS / Text
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleShare(bill)}>
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Share PDF
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       {canReceivePayment(bill.bill_status) && (
                         <Button
                           size="sm"
@@ -340,22 +370,40 @@ const BillHistoryDialog = ({
                 )}
               </div>
 
-              <div className="flex gap-2 pt-3">
+              <div className="flex flex-col gap-2 pt-3">
                 <Button
-                  className="flex-1"
+                  className="w-full"
                   onClick={() => handleDownload(selectedBill)}
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => handleShare(selectedBill)}
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleWhatsAppShare(selectedBill)}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1 text-green-600" />
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleSMSShare(selectedBill)}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-1 text-blue-600" />
+                    SMS
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => handleShare(selectedBill)}
+                  >
+                    <Share2 className="w-4 h-4 mr-1" />
+                    Share
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
