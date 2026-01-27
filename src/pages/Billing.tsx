@@ -18,7 +18,11 @@ import {
   Banknote,
   Smartphone,
   Percent,
-  History
+  History,
+  MessageCircle,
+  MessageSquare,
+  Share2,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -39,7 +43,7 @@ import { useGuestData } from "@/hooks/useGuestData";
 import BillHistoryDialog, { Bill } from "@/components/billing/BillHistoryDialog";
 import RefundDialog, { RefundData } from "@/components/billing/RefundDialog";
 import ReceivePaymentDialog from "@/components/billing/ReceivePaymentDialog";
-import { downloadBillPdf, BillData } from "@/components/billing/BillPdfGenerator";
+import { downloadBillPdf, shareViaWhatsApp, shareViaSMS, shareBillPdf, BillData } from "@/components/billing/BillPdfGenerator";
 
 interface Product {
   id: string;
@@ -92,6 +96,10 @@ const Billing = () => {
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [receivePaymentDialogOpen, setReceivePaymentDialogOpen] = useState(false);
   const [refundLoading, setRefundLoading] = useState(false);
+  
+  // Share dialog state
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [lastBillData, setLastBillData] = useState<BillData | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -336,7 +344,7 @@ const Billing = () => {
 
       toast.success("✅ Bill saved successfully!");
 
-      // Generate PDF for the bill
+      // Store bill data for sharing and auto-download PDF
       const pdfData: BillData = {
         billNumber: savedBillNumber,
         customerName: customerName || undefined,
@@ -352,7 +360,13 @@ const Billing = () => {
         billStatus,
         createdAt: new Date().toISOString(),
       };
+      
+      // Download PDF automatically
       downloadBillPdf(pdfData);
+      
+      // Store for share dialog
+      setLastBillData(pdfData);
+      setShowShareDialog(true);
       
       // Reset form
       setBillItems([]);
@@ -949,6 +963,72 @@ const Billing = () => {
         onSubmit={processReceivePayment}
         loading={refundLoading}
       />
+
+      {/* Share Bill Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="w-5 h-5" />
+              Share Bill
+            </DialogTitle>
+          </DialogHeader>
+          {lastBillData && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Bill <strong>{lastBillData.billNumber}</strong> saved! Share it with your customer:
+              </p>
+              
+              <div className="grid gap-3">
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    shareViaWhatsApp(lastBillData, lastBillData.customerPhone);
+                    setShowShareDialog(false);
+                  }}
+                >
+                  <MessageCircle className="w-5 h-5 mr-3 text-green-600" />
+                  Send via WhatsApp
+                </Button>
+                
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    shareViaSMS(lastBillData, lastBillData.customerPhone);
+                    setShowShareDialog(false);
+                  }}
+                >
+                  <MessageSquare className="w-5 h-5 mr-3 text-blue-600" />
+                  Send via SMS / Text
+                </Button>
+                
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    shareBillPdf(lastBillData);
+                    setShowShareDialog(false);
+                  }}
+                >
+                  <Share2 className="w-5 h-5 mr-3" />
+                  Share PDF
+                </Button>
+              </div>
+              
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => setShowShareDialog(false)}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Skip
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
