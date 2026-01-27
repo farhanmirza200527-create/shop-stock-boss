@@ -171,6 +171,7 @@ export type Database = {
       }
       products: {
         Row: {
+          barcode: string | null
           category: string | null
           category_id: string | null
           column_number: string | null
@@ -192,6 +193,7 @@ export type Database = {
           warranty_period: string | null
         }
         Insert: {
+          barcode?: string | null
           category?: string | null
           category_id?: string | null
           column_number?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           warranty_period?: string | null
         }
         Update: {
+          barcode?: string | null
           category?: string | null
           category_id?: string | null
           column_number?: string | null

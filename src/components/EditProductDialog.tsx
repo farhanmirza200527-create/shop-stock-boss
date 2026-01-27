@@ -12,6 +12,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { ScanBarcode } from "lucide-react";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 interface Product {
   id: string;
@@ -26,6 +28,7 @@ interface Product {
   quantity: number;
   description: string | null;
   image_url: string | null;
+  barcode?: string | null;
 }
 
 interface EditProductDialogProps {
@@ -42,6 +45,7 @@ const EditProductDialog = ({
   onSuccess,
 }: EditProductDialogProps) => {
   const [loading, setLoading] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [formData, setFormData] = useState({
     product_name: product.product_name || "",
     price: product.price || 0,
@@ -53,7 +57,13 @@ const EditProductDialog = ({
     warranty_period: product.warranty_period || "",
     quantity: product.quantity || 0,
     description: product.description || "",
+    barcode: product.barcode || "",
   });
+
+  const handleBarcodeScan = (code: string) => {
+    setFormData({ ...formData, barcode: code });
+    toast.success(`Barcode scanned: ${code}`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +75,7 @@ const EditProductDialog = ({
         .update({
           ...formData,
           warranty_available: formData.warranty_available === "Yes",
+          barcode: formData.barcode || null,
         })
         .eq("id", product.id);
 
@@ -82,149 +93,184 @@ const EditProductDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Product</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="edit_product_name">Product Name *</Label>
-            <Input
-              id="edit_product_name"
-              value={formData.product_name}
-              onChange={(e) =>
-                setFormData({ ...formData, product_name: e.target.value })
-              }
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="edit_price">Price (₹) *</Label>
+              <Label htmlFor="edit_product_name">Product Name *</Label>
               <Input
-                id="edit_price"
-                type="number"
-                value={formData.price}
+                id="edit_product_name"
+                value={formData.product_name}
                 onChange={(e) =>
-                  setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                  setFormData({ ...formData, product_name: e.target.value })
                 }
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="edit_quantity">Quantity *</Label>
-              <Input
-                id="edit_quantity"
-                type="number"
-                value={formData.quantity}
-                onChange={(e) =>
-                  setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
-                }
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="edit_section">Section</Label>
-              <Input
-                id="edit_section"
-                value={formData.section}
-                onChange={(e) =>
-                  setFormData({ ...formData, section: e.target.value })
-                }
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit_price">Price (₹) *</Label>
+                <Input
+                  id="edit_price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_quantity">Quantity *</Label>
+                <Input
+                  id="edit_quantity"
+                  type="number"
+                  value={formData.quantity}
+                  onChange={(e) =>
+                    setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
+                  }
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="edit_part">Part</Label>
-              <Input
-                id="edit_part"
-                value={formData.part}
-                onChange={(e) =>
-                  setFormData({ ...formData, part: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_row">Row</Label>
-              <Input
-                id="edit_row"
-                value={formData.row_number}
-                onChange={(e) =>
-                  setFormData({ ...formData, row_number: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_column">Column</Label>
-              <Input
-                id="edit_column"
-                value={formData.column_number}
-                onChange={(e) =>
-                  setFormData({ ...formData, column_number: e.target.value })
-                }
-              />
-            </div>
-          </div>
 
-          <div>
-            <Label htmlFor="edit_warranty">Warranty Available</Label>
-            <select
-              id="edit_warranty"
-              value={formData.warranty_available}
-              onChange={(e) =>
-                setFormData({ ...formData, warranty_available: e.target.value })
-              }
-              className="w-full p-2 border rounded-lg bg-background"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          {formData.warranty_available === "Yes" && (
+            {/* Barcode field */}
             <div>
-              <Label htmlFor="edit_warranty_period">Warranty Period</Label>
-              <Input
-                id="edit_warranty_period"
-                value={formData.warranty_period}
+              <Label htmlFor="edit_barcode">Barcode / SKU</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="edit_barcode"
+                  value={formData.barcode}
+                  onChange={(e) =>
+                    setFormData({ ...formData, barcode: e.target.value })
+                  }
+                  placeholder="Scan or enter barcode..."
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowBarcodeScanner(true)}
+                  className="shrink-0"
+                >
+                  <ScanBarcode className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit_section">Section</Label>
+                <Input
+                  id="edit_section"
+                  value={formData.section}
+                  onChange={(e) =>
+                    setFormData({ ...formData, section: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_part">Part</Label>
+                <Input
+                  id="edit_part"
+                  value={formData.part}
+                  onChange={(e) =>
+                    setFormData({ ...formData, part: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_row">Row</Label>
+                <Input
+                  id="edit_row"
+                  value={formData.row_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, row_number: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_column">Column</Label>
+                <Input
+                  id="edit_column"
+                  value={formData.column_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, column_number: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit_warranty">Warranty Available</Label>
+              <select
+                id="edit_warranty"
+                value={formData.warranty_available}
                 onChange={(e) =>
-                  setFormData({ ...formData, warranty_period: e.target.value })
+                  setFormData({ ...formData, warranty_available: e.target.value })
                 }
+                className="w-full p-2 border rounded-lg bg-background"
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+
+            {formData.warranty_available === "Yes" && (
+              <div>
+                <Label htmlFor="edit_warranty_period">Warranty Period</Label>
+                <Input
+                  id="edit_warranty_period"
+                  value={formData.warranty_period}
+                  onChange={(e) =>
+                    setFormData({ ...formData, warranty_period: e.target.value })
+                  }
+                />
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="edit_description">Description</Label>
+              <Textarea
+                id="edit_description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                rows={3}
               />
             </div>
-          )}
 
-          <div>
-            <Label htmlFor="edit_description">Description</Label>
-            <Textarea
-              id="edit_description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              rows={3}
-            />
-          </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Updating..." : "Update Product"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Updating..." : "Update Product"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onOpenChange={setShowBarcodeScanner}
+        onScan={handleBarcodeScan}
+        title="Scan Product Barcode"
+      />
+    </>
   );
 };
 
