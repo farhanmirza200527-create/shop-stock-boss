@@ -797,7 +797,12 @@ const Billing = () => {
                 <Button
                   key={mode}
                   variant={paymentMode === mode ? "default" : "outline"}
-                  onClick={() => setPaymentMode(mode)}
+                  onClick={() => {
+                    setPaymentMode(mode);
+                    if (mode === "ONLINE" && allQRCodes.length > 0) {
+                      setShowPaymentQR(true);
+                    }
+                  }}
                   className="flex-1"
                 >
                   {mode === "CASH" && <Banknote className="w-4 h-4 mr-1" />}
@@ -806,6 +811,22 @@ const Billing = () => {
                   {mode}
                 </Button>
               ))}
+            </div>
+            {paymentMode === "ONLINE" && allQRCodes.length > 0 && (
+              <Button
+                variant="outline"
+                className="w-full mt-3"
+                onClick={() => setShowPaymentQR(true)}
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                Show Payment QR Code
+              </Button>
+            )}
+            {paymentMode === "ONLINE" && allQRCodes.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Add payment QR codes in Settings → Payment QR Codes
+              </p>
+            )}
             </div>
           </CardContent>
         </Card>
