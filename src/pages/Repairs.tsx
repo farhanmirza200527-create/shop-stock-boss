@@ -324,7 +324,7 @@ const Repairs = () => {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Add New Repair Job</CardTitle>
-                <CardDescription>Fill in the details for the repair job</CardDescription>
+                <CardDescription>Fill in the details for the repair / service job</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
