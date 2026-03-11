@@ -1119,6 +1119,33 @@ const Billing = () => {
         title="Scan Product Barcode"
       />
 
+      {/* Payment QR Code Dialog */}
+      <Dialog open={showPaymentQR} onOpenChange={setShowPaymentQR}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              Payment QR Code
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {allQRCodes.map((qr: any) => (
+              <div key={qr.id} className="text-center">
+                <img
+                  src={qr.image_url}
+                  alt={qr.label}
+                  className="w-full max-w-[250px] mx-auto aspect-square object-contain rounded-lg border p-2"
+                />
+                <p className="text-sm font-medium mt-2">{qr.label}</p>
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground text-center">
+              Show this QR code to the customer for payment
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
     </div>
   );
