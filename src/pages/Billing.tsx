@@ -827,7 +827,6 @@ const Billing = () => {
                 Add payment QR codes in Settings → Payment QR Codes
               </p>
             )}
-            </div>
           </CardContent>
         </Card>
 
