@@ -23,7 +23,8 @@ import {
   MessageSquare,
   Share2,
   X,
-  ScanBarcode
+  ScanBarcode,
+  QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 import {
