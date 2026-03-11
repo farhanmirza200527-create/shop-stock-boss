@@ -355,16 +355,16 @@ const Repairs = () => {
                       />
                     </div>
 
-                    {/* Device Model */}
+                    {/* Item / Product Name */}
                     <div className="space-y-2">
                       <Label htmlFor="deviceModel">
-                        Device Model <span className="text-destructive">*</span>
+                        Item / Product Name <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="deviceModel"
                         value={deviceModel}
                         onChange={(e) => setDeviceModel(e.target.value)}
-                        placeholder="e.g., iPhone 12, Samsung A52"
+                        placeholder="e.g., iPhone 12, Washing Machine, AC Unit, Watch"
                         required
                       />
                     </div>
