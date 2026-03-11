@@ -395,7 +395,7 @@ const Repairs = () => {
                       id="problemDescription"
                       value={problemDescription}
                       onChange={(e) => setProblemDescription(e.target.value)}
-                      placeholder="Describe the problem in detail"
+                      placeholder="Describe the issue or service needed"
                       rows={3}
                       required
                     />
