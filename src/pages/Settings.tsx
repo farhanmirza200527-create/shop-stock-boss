@@ -8,6 +8,7 @@ import ShopInfoCard from "@/components/profile/ShopInfoCard";
 import ShopLocationCard from "@/components/profile/ShopLocationCard";
 import AppInfoCard from "@/components/profile/AppInfoCard";
 import ActionsCard from "@/components/profile/ActionsCard";
+import PaymentQRCard from "@/components/profile/PaymentQRCard";
 
 const Settings = () => {
   const { user, isGuest } = useAuth();
