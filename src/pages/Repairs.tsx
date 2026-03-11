@@ -240,7 +240,7 @@ const Repairs = () => {
                         <div>
                           <CardTitle>{repair.customer_name}</CardTitle>
                           <CardDescription>
-                            {repair.customer_phone && `📱 ${repair.customer_phone}`}
+                            {repair.customer_phone && `📞 ${repair.customer_phone}`}
                           </CardDescription>
                         </div>
                         <span
