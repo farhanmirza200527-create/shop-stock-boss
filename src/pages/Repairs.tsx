@@ -403,12 +403,12 @@ const Repairs = () => {
 
                   {/* Parts Used */}
                   <div className="space-y-2">
-                    <Label htmlFor="partsUsed">Parts Used / Needed</Label>
+                    <Label htmlFor="partsUsed">Parts / Materials Used</Label>
                     <Textarea
                       id="partsUsed"
                       value={partsUsed}
                       onChange={(e) => setPartsUsed(e.target.value)}
-                      placeholder="List parts required or used"
+                      placeholder="List parts or materials required / used"
                       rows={2}
                     />
                   </div>
