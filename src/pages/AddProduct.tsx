@@ -84,6 +84,7 @@ const AddProduct = () => {
     warranty_available: "No",
     warranty_period: "",
     quantity: 0,
+    quantity_unit: "pcs",
     description: "",
     barcode: "",
   });
@@ -277,6 +278,7 @@ const AddProduct = () => {
         warranty_available: "No",
         warranty_period: "",
         quantity: 0,
+        quantity_unit: "pcs",
         description: "",
         barcode: "",
       });
@@ -445,15 +447,37 @@ const AddProduct = () => {
               {formData.item_type === 'PRODUCT' && (
                 <div>
                   <Label htmlFor="quantity">Quantity in Stock</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
-                    }
-                    placeholder="0"
-                  />
+                  <div className="flex gap-0">
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={formData.quantity}
+                      onChange={(e) =>
+                        setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })
+                      }
+                      placeholder="0"
+                      className="rounded-r-none border-r-0 flex-1"
+                    />
+                    <Select
+                      value={formData.quantity_unit}
+                      onValueChange={(value) => setFormData({ ...formData, quantity_unit: value })}
+                    >
+                      <SelectTrigger className="w-[90px] rounded-l-none bg-muted/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border shadow-lg z-50">
+                        <SelectItem value="pcs">Pcs</SelectItem>
+                        <SelectItem value="kg">Kg</SelectItem>
+                        <SelectItem value="g">Gram</SelectItem>
+                        <SelectItem value="l">Litre</SelectItem>
+                        <SelectItem value="ml">mL</SelectItem>
+                        <SelectItem value="m">Meter</SelectItem>
+                        <SelectItem value="ft">Feet</SelectItem>
+                        <SelectItem value="box">Box</SelectItem>
+                        <SelectItem value="dozen">Dozen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
 
