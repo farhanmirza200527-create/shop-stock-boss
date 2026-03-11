@@ -144,6 +144,28 @@ const Billing = () => {
     enabled: !isGuest,
   });
 
+  // Fetch payment QR codes
+  const { data: paymentQRCodes = [] } = useQuery({
+    queryKey: ["payment-qr-codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_qr_codes")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !isGuest,
+  });
+
+  // Guest QR codes
+  const guestQRCodes = isGuest ? (() => {
+    try { return JSON.parse(localStorage.getItem("guestPaymentQRs") || "[]"); }
+    catch { return []; }
+  })() : [];
+
+  const allQRCodes = isGuest ? guestQRCodes : paymentQRCodes;
+
   // Update guest products when needed
   useEffect(() => {
     if (isGuest) {
