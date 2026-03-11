@@ -8,6 +8,7 @@ import ShopInfoCard from "@/components/profile/ShopInfoCard";
 import ShopLocationCard from "@/components/profile/ShopLocationCard";
 import AppInfoCard from "@/components/profile/AppInfoCard";
 import ActionsCard from "@/components/profile/ActionsCard";
+import PaymentQRCard from "@/components/profile/PaymentQRCard";
 
 const Settings = () => {
   const { user, isGuest } = useAuth();
@@ -58,7 +59,10 @@ const Settings = () => {
         {/* 3. Shop Location */}
         <ShopLocationCard profile={profile} />
 
-        {/* 4. App Information */}
+        {/* 4. Payment QR Codes */}
+        <PaymentQRCard />
+
+        {/* 5. App Information */}
         <AppInfoCard />
 
         {/* 5. Actions */}

@@ -23,7 +23,8 @@ import {
   MessageSquare,
   Share2,
   X,
-  ScanBarcode
+  ScanBarcode,
+  QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -107,6 +108,9 @@ const Billing = () => {
   // Barcode scanner state
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   
+  // Payment QR code dialog state
+  const [showPaymentQR, setShowPaymentQR] = useState(false);
+  
   const queryClient = useQueryClient();
 
   // Fetch products for authenticated users
@@ -139,6 +143,28 @@ const Billing = () => {
     },
     enabled: !isGuest,
   });
+
+  // Fetch payment QR codes
+  const { data: paymentQRCodes = [] } = useQuery({
+    queryKey: ["payment-qr-codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_qr_codes")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !isGuest,
+  });
+
+  // Guest QR codes
+  const guestQRCodes = isGuest ? (() => {
+    try { return JSON.parse(localStorage.getItem("guestPaymentQRs") || "[]"); }
+    catch { return []; }
+  })() : [];
+
+  const allQRCodes = isGuest ? guestQRCodes : paymentQRCodes;
 
   // Update guest products when needed
   useEffect(() => {
@@ -771,7 +797,12 @@ const Billing = () => {
                 <Button
                   key={mode}
                   variant={paymentMode === mode ? "default" : "outline"}
-                  onClick={() => setPaymentMode(mode)}
+                  onClick={() => {
+                    setPaymentMode(mode);
+                    if (mode === "ONLINE" && allQRCodes.length > 0) {
+                      setShowPaymentQR(true);
+                    }
+                  }}
                   className="flex-1"
                 >
                   {mode === "CASH" && <Banknote className="w-4 h-4 mr-1" />}
@@ -781,6 +812,21 @@ const Billing = () => {
                 </Button>
               ))}
             </div>
+            {paymentMode === "ONLINE" && allQRCodes.length > 0 && (
+              <Button
+                variant="outline"
+                className="w-full mt-3"
+                onClick={() => setShowPaymentQR(true)}
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                Show Payment QR Code
+              </Button>
+            )}
+            {paymentMode === "ONLINE" && allQRCodes.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Add payment QR codes in Settings → Payment QR Codes
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -1072,6 +1118,33 @@ const Billing = () => {
         onScan={handleBarcodeScan}
         title="Scan Product Barcode"
       />
+
+      {/* Payment QR Code Dialog */}
+      <Dialog open={showPaymentQR} onOpenChange={setShowPaymentQR}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              Payment QR Code
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {allQRCodes.map((qr: any) => (
+              <div key={qr.id} className="text-center">
+                <img
+                  src={qr.image_url}
+                  alt={qr.label}
+                  className="w-full max-w-[250px] mx-auto aspect-square object-contain rounded-lg border p-2"
+                />
+                <p className="text-sm font-medium mt-2">{qr.label}</p>
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground text-center">
+              Show this QR code to the customer for payment
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

@@ -98,6 +98,30 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_qr_codes: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          label: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          label?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          label?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pending_payment_history: {
         Row: {
           amount: number
