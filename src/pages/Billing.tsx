@@ -108,6 +108,9 @@ const Billing = () => {
   // Barcode scanner state
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   
+  // Payment QR code dialog state
+  const [showPaymentQR, setShowPaymentQR] = useState(false);
+  
   const queryClient = useQueryClient();
 
   // Fetch products for authenticated users
