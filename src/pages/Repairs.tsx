@@ -205,7 +205,7 @@ const Repairs = () => {
         <div className="flex items-center justify-between mb-6 bg-card/50 backdrop-blur-sm p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-2">
             <Wrench className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">Repairing Section</h1>
+            <h1 className="text-2xl font-bold text-primary">Repair / Service Section</h1>
           </div>
           <Button
             variant="outline"
@@ -240,7 +240,7 @@ const Repairs = () => {
                         <div>
                           <CardTitle>{repair.customer_name}</CardTitle>
                           <CardDescription>
-                            {repair.customer_phone && `📱 ${repair.customer_phone}`}
+                            {repair.customer_phone && `📞 ${repair.customer_phone}`}
                           </CardDescription>
                         </div>
                         <span
@@ -256,7 +256,7 @@ const Repairs = () => {
                     <CardContent className="space-y-2">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Device</p>
+                          <p className="text-sm font-medium text-muted-foreground">Item / Product</p>
                           <p className="font-medium">{repair.device_model}</p>
                         </div>
                         <div>
@@ -324,7 +324,7 @@ const Repairs = () => {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Add New Repair Job</CardTitle>
-                <CardDescription>Fill in the details for the repair job</CardDescription>
+                <CardDescription>Fill in the details for the repair / service job</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -355,16 +355,16 @@ const Repairs = () => {
                       />
                     </div>
 
-                    {/* Device Model */}
+                    {/* Item / Product Name */}
                     <div className="space-y-2">
                       <Label htmlFor="deviceModel">
-                        Device Model <span className="text-destructive">*</span>
+                        Item / Product Name <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="deviceModel"
                         value={deviceModel}
                         onChange={(e) => setDeviceModel(e.target.value)}
-                        placeholder="e.g., iPhone 12, Samsung A52"
+                        placeholder="e.g., iPhone 12, Washing Machine, AC Unit, Watch"
                         required
                       />
                     </div>
@@ -395,7 +395,7 @@ const Repairs = () => {
                       id="problemDescription"
                       value={problemDescription}
                       onChange={(e) => setProblemDescription(e.target.value)}
-                      placeholder="Describe the problem in detail"
+                      placeholder="Describe the issue or service needed"
                       rows={3}
                       required
                     />
@@ -403,12 +403,12 @@ const Repairs = () => {
 
                   {/* Parts Used */}
                   <div className="space-y-2">
-                    <Label htmlFor="partsUsed">Parts Used / Needed</Label>
+                    <Label htmlFor="partsUsed">Parts / Materials Used</Label>
                     <Textarea
                       id="partsUsed"
                       value={partsUsed}
                       onChange={(e) => setPartsUsed(e.target.value)}
-                      placeholder="List parts required or used"
+                      placeholder="List parts or materials required / used"
                       rows={2}
                     />
                   </div>
