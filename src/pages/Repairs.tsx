@@ -205,7 +205,7 @@ const Repairs = () => {
         <div className="flex items-center justify-between mb-6 bg-card/50 backdrop-blur-sm p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-2">
             <Wrench className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">Repairing Section</h1>
+            <h1 className="text-2xl font-bold text-primary">Repair / Service Section</h1>
           </div>
           <Button
             variant="outline"
