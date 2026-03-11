@@ -278,6 +278,7 @@ const AddProduct = () => {
         warranty_available: "No",
         warranty_period: "",
         quantity: 0,
+        quantity_unit: "pcs",
         description: "",
         barcode: "",
       });
