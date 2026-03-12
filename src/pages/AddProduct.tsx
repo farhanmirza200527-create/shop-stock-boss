@@ -223,8 +223,15 @@ const AddProduct = () => {
 
         // Upload image if selected
         if (imageFile) {
-          const fileExt = imageFile.name.split(".").pop();
-          const fileName = `${currentUserId}/${Math.random()}.${fileExt}`;
+          if (imageFile.size > 5 * 1024 * 1024) {
+            throw new Error("Image file size must be less than 5 MB");
+          }
+          const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+          if (!allowedTypes.includes(imageFile.type)) {
+            throw new Error("Only JPEG, PNG, WebP, and GIF images are allowed");
+          }
+          const fileExt = imageFile.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+          const fileName = `${currentUserId}/${crypto.randomUUID()}.${fileExt}`;
           const { error: uploadError } = await supabase.storage
             .from("product-images")
             .upload(fileName, imageFile);

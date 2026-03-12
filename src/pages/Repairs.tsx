@@ -85,8 +85,15 @@ const Repairs = () => {
 
       // Upload photo if provided
       if (photoFile) {
-        const fileExt = photoFile.name.split(".").pop();
-        const fileName = `${currentUserId}/${Math.random()}.${fileExt}`;
+        if (photoFile.size > 5 * 1024 * 1024) {
+          throw new Error("Photo file size must be less than 5 MB");
+        }
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (!allowedTypes.includes(photoFile.type)) {
+          throw new Error("Only JPEG, PNG, WebP, and GIF images are allowed");
+        }
+        const fileExt = photoFile.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const fileName = `${currentUserId}/${crypto.randomUUID()}.${fileExt}`;
         const filePath = `repair-photos/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
