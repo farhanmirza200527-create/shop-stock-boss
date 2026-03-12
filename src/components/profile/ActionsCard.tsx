@@ -10,7 +10,6 @@ const ActionsCard = () => {
   const { user, isGuest, setGuestMode } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [showResetDialog, setShowResetDialog] = useState(false);
 
   const handleLogout = async () => {
     if (isGuest) {
