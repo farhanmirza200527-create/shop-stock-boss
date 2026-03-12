@@ -102,32 +102,8 @@ const ActionsCard = () => {
               Exit Guest Mode
             </Button>
           )}
-
-          <Button
-            onClick={() => setShowResetDialog(true)}
-            className="w-full justify-start"
-            variant="outline"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Reset App (Clear Local Data)
-          </Button>
         </CardContent>
       </Card>
-
-      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset App?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will clear all local data stored on this device. Your cloud data (if logged in) will NOT be deleted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetApp}>Reset</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
