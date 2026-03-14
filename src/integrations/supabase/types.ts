@@ -445,7 +445,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_user_profile: {
+        Args: {
+          p_address?: string
+          p_address_text?: string
+          p_city?: string
+          p_email?: string
+          p_latitude?: number
+          p_longitude?: number
+          p_phone_number?: string
+          p_shop_name?: string
+          p_state?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
