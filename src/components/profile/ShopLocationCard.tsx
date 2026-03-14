@@ -104,16 +104,13 @@ const ShopLocationCard = ({ profile }: ShopLocationCardProps) => {
           description: "Location saved locally",
         });
       } else {
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            latitude: locationInfo.latitude,
-            longitude: locationInfo.longitude,
-            address_text: locationInfo.address_text,
-            city: locationInfo.city,
-            state: locationInfo.state,
-          })
-          .eq("user_id", user?.id);
+        const { error } = await supabase.rpc("update_user_profile", {
+          p_latitude: locationInfo.latitude,
+          p_longitude: locationInfo.longitude,
+          p_address_text: locationInfo.address_text,
+          p_city: locationInfo.city,
+          p_state: locationInfo.state,
+        });
 
         if (error) throw error;
 
