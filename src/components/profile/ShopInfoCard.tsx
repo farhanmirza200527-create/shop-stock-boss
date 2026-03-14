@@ -59,15 +59,11 @@ const ShopInfoCard = ({ profile }: ShopInfoCardProps) => {
           description: "Shop information saved locally",
         });
       } else {
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            shop_name: shopInfo.shop_name,
-            shop_type: shopInfo.shop_type,
-            phone_number: shopInfo.phone_number,
-            address: shopInfo.address,
-          })
-          .eq("user_id", user?.id);
+        const { error } = await supabase.rpc("update_user_profile", {
+          p_shop_name: shopInfo.shop_name,
+          p_address: shopInfo.address,
+          p_phone_number: shopInfo.phone_number,
+        });
 
         if (error) throw error;
 

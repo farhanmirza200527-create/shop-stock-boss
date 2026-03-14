@@ -97,16 +97,18 @@ const Repairs = () => {
         const filePath = `repair-photos/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("product-images")
+          .from("repair-photos")
           .upload(filePath, photoFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(filePath);
+        // Use signed URL since repair-photos bucket is private
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from("repair-photos")
+          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year expiry
 
-        photoUrl = urlData.publicUrl;
+        if (signedUrlError) throw signedUrlError;
+        photoUrl = signedUrlData.signedUrl;
       }
 
       const { error } = await supabase.from("repairs").insert([{

@@ -152,16 +152,13 @@ const ShopLocationCard = ({ profile }: ShopLocationCardProps) => {
           description: "Location removed",
         });
       } else {
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            latitude: null,
-            longitude: null,
-            address_text: null,
-            city: null,
-            state: null,
-          })
-          .eq("user_id", user?.id);
+        const { error } = await supabase.rpc("update_user_profile", {
+          p_latitude: null,
+          p_longitude: null,
+          p_address_text: null,
+          p_city: null,
+          p_state: null,
+        });
 
         if (error) throw error;
 
